@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-自动订阅生成脚本 - 简化版
+自动订阅生成脚本 - 增强版
 支持 hysteria2, ss, vmess, trojan, vless 协议
-生成简化配置：只有节点选择和自动选择两个策略组
-所有国内IP直连
+生成简化配置，包含详细备注和统计信息
 """
 
 import os
@@ -12,9 +11,17 @@ import base64
 import json
 import requests
 import yaml
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse, parse_qs, unquote
 import time
+import shutil
+
+def get_beijing_time():
+    """获取东八区北京时间"""
+    utc_now = datetime.utcnow()
+    beijing_tz = timezone(timedelta(hours=8))
+    beijing_time = utc_now.replace(tzinfo=timezone.utc).astimezone(beijing_tz)
+    return beijing_time.strftime('%Y-%m-%d %H:%M:%S')
 
 def safe_decode_base64(data):
     """安全解码Base64数据"""
@@ -346,27 +353,33 @@ def parse_proxy_url(url):
     
     return None
 
-def fetch_subscription(url):
-    """获取订阅内容"""
+def fetch_subscription(url, timeout=30):
+    """获取订阅内容 - 修复返回值问题"""
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/plain, */*',
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=headers, timeout=timeout)
         response.raise_for_status()
         
         content = response.text.strip()
         decoded = safe_decode_base64(content)
         
         if decoded:
-            return decoded
+            return decoded, True, None  # 返回三个值
         
-        return content
+        return content, True, None  # 返回三个值
         
+    except requests.exceptions.Timeout:
+        return None, False, "请求超时"
+    except requests.exceptions.ConnectionError:
+        return None, False, "连接错误"
+    except requests.exceptions.HTTPError as e:
+        return None, False, f"HTTP错误: {e.response.status_code}"
     except Exception as e:
-        print(f"    获取失败: {e}")
-        return None
+        return None, False, f"未知错误: {str(e)}"
 
 def process_subscription_content(content):
     """处理订阅内容"""
@@ -387,8 +400,32 @@ def process_subscription_content(content):
     
     return proxies
 
-def generate_simple_clash_config(proxies, filename):
-    """生成简化版Clash配置 - 只有两个策略组"""
+def generate_clash_config_with_comments(proxies, filename, source_content, success_count, total_count, failed_urls):
+    """生成带备注的Clash配置"""
+    
+    # 获取当前时间
+    update_time = get_beijing_time()
+    
+    # 生成备注
+    comments = f"""# ========================================
+# Clash 配置文件
+# ========================================
+# 
+# 更新时间（东八区北京时间）: {update_time}
+# 输入源文件: {filename}
+# 订阅链接获取情况: {success_count}/{total_count}
+# 
+# 失败的链接:
+{failed_urls}
+# 
+# 输入源文件内容:
+{source_content}
+# 
+# ========================================
+# 配置开始
+# ========================================
+"""
+    
     if not proxies:
         print("  没有有效节点，创建测试配置")
         proxies = [{
@@ -403,9 +440,8 @@ def generate_simple_clash_config(proxies, filename):
     
     cleaned_proxies = [clean_config(p) for p in proxies if p]
     
-    # 简化配置：只有两个策略组
+    # Clash配置
     config = {
-        # 基础设置
         'port': 7890,
         'socks-port': 7891,
         'mixed-port': 7893,
@@ -414,7 +450,6 @@ def generate_simple_clash_config(proxies, filename):
         'log-level': 'info',
         'external-controller': '127.0.0.1:9090',
         
-        # DNS设置
         'dns': {
             'enable': True,
             'ipv6': False,
@@ -430,10 +465,8 @@ def generate_simple_clash_config(proxies, filename):
             }
         },
         
-        # 代理节点
-        'proxies': cleaned_proxies[:200],  # 最多200个节点
+        'proxies': cleaned_proxies[:200],
         
-        # 策略组 - 只有两个
         'proxy-groups': [
             {
                 'name': '节点选择',
@@ -442,7 +475,7 @@ def generate_simple_clash_config(proxies, filename):
             },
             {
                 'name': '自动选择',
-                'type': 'url-test',  # 自动选择低延迟节点
+                'type': 'url-test',
                 'url': 'http://www.gstatic.com/generate_204',
                 'interval': 300,
                 'tolerance': 50,
@@ -450,7 +483,6 @@ def generate_simple_clash_config(proxies, filename):
             }
         ],
         
-        # 规则 - 国内IP全部直连
         'rules': [
             # 国内域名直连
             'DOMAIN-SUFFIX,cn,DIRECT',
@@ -460,83 +492,19 @@ def generate_simple_clash_config(proxies, filename):
             'DOMAIN-SUFFIX,jd.com,DIRECT',
             'DOMAIN-SUFFIX,weibo.com,DIRECT',
             'DOMAIN-SUFFIX,sina.com,DIRECT',
-            'DOMAIN-SUFFIX,sohu.com,DIRECT',
             'DOMAIN-SUFFIX,163.com,DIRECT',
-            'DOMAIN-SUFFIX,126.com,DIRECT',
             'DOMAIN-SUFFIX,alibaba.com,DIRECT',
             'DOMAIN-SUFFIX,alicdn.com,DIRECT',
             'DOMAIN-SUFFIX,alipay.com,DIRECT',
-            'DOMAIN-SUFFIX,wechat.com,DIRECT',
             'DOMAIN-SUFFIX,tencent.com,DIRECT',
             'DOMAIN-SUFFIX,bilibili.com,DIRECT',
             'DOMAIN-SUFFIX,zhihu.com,DIRECT',
             'DOMAIN-SUFFIX,douyin.com,DIRECT',
-            'DOMAIN-SUFFIX,toutiao.com,DIRECT',
-            'DOMAIN-SUFFIX,bytedance.com,DIRECT',
-            'DOMAIN-SUFFIX,meituan.com,DIRECT',
-            'DOMAIN-SUFFIX,dianping.com,DIRECT',
-            'DOMAIN-SUFFIX,ctrip.com,DIRECT',
-            'DOMAIN-SUFFIX,huya.com,DIRECT',
-            'DOMAIN-SUFFIX,douyu.com,DIRECT',
             
-            # 国内IP段直连
-            'IP-CIDR,1.0.1.0/24,DIRECT',
-            'IP-CIDR,1.0.2.0/23,DIRECT',
-            'IP-CIDR,1.0.8.0/21,DIRECT',
-            'IP-CIDR,1.0.32.0/19,DIRECT',
-            'IP-CIDR,1.1.0.0/24,DIRECT',
-            'IP-CIDR,1.1.2.0/23,DIRECT',
-            'IP-CIDR,1.1.4.0/22,DIRECT',
-            'IP-CIDR,1.1.8.0/21,DIRECT',
-            'IP-CIDR,1.1.16.0/20,DIRECT',
-            'IP-CIDR,1.1.32.0/19,DIRECT',
-            'IP-CIDR,1.2.0.0/23,DIRECT',
-            'IP-CIDR,1.2.2.0/24,DIRECT',
-            'IP-CIDR,1.2.4.0/22,DIRECT',
-            'IP-CIDR,1.2.8.0/21,DIRECT',
-            'IP-CIDR,1.2.16.0/20,DIRECT',
-            'IP-CIDR,1.2.32.0/19,DIRECT',
-            'IP-CIDR,1.2.64.0/18,DIRECT',
-            'IP-CIDR,1.3.0.0/16,DIRECT',
-            'IP-CIDR,1.4.1.0/24,DIRECT',
-            'IP-CIDR,1.4.2.0/23,DIRECT',
-            'IP-CIDR,1.4.4.0/22,DIRECT',
-            'IP-CIDR,1.4.8.0/21,DIRECT',
-            'IP-CIDR,1.4.16.0/20,DIRECT',
-            'IP-CIDR,1.4.32.0/19,DIRECT',
-            'IP-CIDR,1.4.64.0/18,DIRECT',
-            'IP-CIDR,1.8.0.0/16,DIRECT',
-            'IP-CIDR,1.10.0.0/21,DIRECT',
-            'IP-CIDR,1.10.8.0/23,DIRECT',
-            'IP-CIDR,1.10.11.0/24,DIRECT',
-            'IP-CIDR,1.10.12.0/22,DIRECT',
-            'IP-CIDR,1.10.16.0/20,DIRECT',
-            'IP-CIDR,1.10.32.0/19,DIRECT',
-            'IP-CIDR,1.10.64.0/18,DIRECT',
-            'IP-CIDR,1.12.0.0/14,DIRECT',
-            'IP-CIDR,1.24.0.0/13,DIRECT',
-            'IP-CIDR,1.45.0.0/16,DIRECT',
-            'IP-CIDR,1.48.0.0/15,DIRECT',
-            'IP-CIDR,1.50.0.0/16,DIRECT',
-            'IP-CIDR,1.51.0.0/16,DIRECT',
-            'IP-CIDR,1.56.0.0/13,DIRECT',
-            'IP-CIDR,1.68.0.0/14,DIRECT',
-            'IP-CIDR,1.80.0.0/13,DIRECT',
-            'IP-CIDR,1.88.0.0/14,DIRECT',
-            'IP-CIDR,1.92.0.0/15,DIRECT',
-            'IP-CIDR,1.94.0.0/15,DIRECT',
-            'IP-CIDR,1.116.0.0/14,DIRECT',
-            'IP-CIDR,1.180.0.0/14,DIRECT',
-            'IP-CIDR,1.184.0.0/15,DIRECT',
-            'IP-CIDR,1.188.0.0/14,DIRECT',
-            'IP-CIDR,1.192.0.0/13,DIRECT',
-            'IP-CIDR,1.202.0.0/15,DIRECT',
-            'IP-CIDR,1.204.0.0/14,DIRECT',
-            
-            # GEOIP中国直连（这个规则必须在IP-CIDR之后）
+            # GEOIP中国直连
             'GEOIP,CN,DIRECT',
             
-            # 最终规则 - 其他所有流量走节点选择
+            # 最终规则
             'MATCH,节点选择'
         ]
     }
@@ -550,6 +518,9 @@ def generate_simple_clash_config(proxies, filename):
     output_path = os.path.join(output_dir, f'{filename}.yaml')
     
     with open(output_path, 'w', encoding='utf-8') as f:
+        # 写入备注
+        f.write(comments)
+        # 写入配置
         yaml.dump(config, f, 
                  allow_unicode=True, 
                  default_flow_style=False, 
@@ -561,9 +532,59 @@ def generate_simple_clash_config(proxies, filename):
     
     return len(cleaned_proxies[:200])
 
+def clear_output_directory():
+    """清空输出目录"""
+    output_dir = '订阅链接'
+    
+    if os.path.exists(output_dir):
+        print(f"清空输出目录: {output_dir}")
+        try:
+            # 只删除文件，保留目录
+            for filename in os.listdir(output_dir):
+                file_path = os.path.join(output_dir, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    print(f"删除文件 {file_path} 失败: {e}")
+            print("输出目录已清空")
+        except Exception as e:
+            print(f"清空目录失败: {e}")
+    else:
+        os.makedirs(output_dir, exist_ok=True)
+        print("创建输出目录")
+
+def read_source_file_content(filepath):
+    """读取源文件内容并添加#注释"""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        commented_lines = []
+        for line in lines:
+            line = line.rstrip('\n')
+            if line.strip():
+                commented_lines.append(f"# {line}")
+            else:
+                commented_lines.append("#")
+        
+        return "\n".join(commented_lines)
+        
+    except Exception as e:
+        print(f"读取源文件失败: {e}")
+        return "# 无法读取源文件内容"
+
 def main():
     """主函数"""
-    print("开始生成简化版Clash订阅...")
+    print("=" * 70)
+    print("自动订阅生成器 - 增强版")
+    print("=" * 70)
+    print(f"开始时间（北京时间）: {get_beijing_time()}")
+    
+    # 清空输出目录
+    clear_output_directory()
     
     input_dir = '输入源'
     os.makedirs(input_dir, exist_ok=True)
@@ -572,23 +593,28 @@ def main():
     txt_files = [f for f in os.listdir(input_dir) if f.endswith('.txt')]
     
     if not txt_files:
-        print(f"没有找到输入文件，请在 '{input_dir}' 中创建.txt文件")
-        return
-    
-    # 清理输出目录
-    output_dir = '订阅链接'
-    os.makedirs(output_dir, exist_ok=True)
-    import glob
-    for old_file in glob.glob(os.path.join(output_dir, '*.yaml')):
-        try:
-            os.remove(old_file)
-        except:
-            pass
+        print(f"\n没有找到输入文件，请在 '{input_dir}' 中创建.txt文件")
+        print("创建示例文件...")
+        example_content = """# 在此添加订阅链接，每行一个
+# 示例:
+https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
+# https://example.com/subscribe.txt
+"""
+        with open(os.path.join(input_dir, 'example.txt'), 'w', encoding='utf-8') as f:
+            f.write(example_content)
+        print(f"已创建示例文件: {input_dir}/example.txt")
+        txt_files = ['example.txt']
     
     # 处理每个文件
     for filename in txt_files:
-        print(f"\n处理文件: {filename}")
+        print(f"\n" + "=" * 50)
+        print(f"处理文件: {filename}")
+        print("=" * 50)
+        
         filepath = os.path.join(input_dir, filename)
+        
+        # 读取源文件内容（用于备注）
+        source_content = read_source_file_content(filepath)
         
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
@@ -601,22 +627,42 @@ def main():
             print("  没有订阅链接")
             continue
         
-        print(f"  找到 {len(urls)} 个订阅链接")
+        total_count = len(urls)
+        print(f"  找到 {total_count} 个订阅链接")
         
         all_proxies = []
+        failed_urls = []
+        success_count = 0
         
+        # 处理每个链接
         for i, url in enumerate(urls):
-            print(f"  [{i+1}/{len(urls)}] 处理: {url[:60]}...")
+            print(f"\n  [{i+1}/{total_count}] 处理链接")
+            print(f"    链接: {url[:80]}...")
             
-            content = fetch_subscription(url)
-            if content:
+            # 修复：正确处理三个返回值
+            result = fetch_subscription(url, timeout=15)
+            content, success, error_msg = result
+            
+            if success and content:
                 proxies = process_subscription_content(content)
                 if proxies:
                     all_proxies.extend(proxies)
-                    print(f"    找到 {len(proxies)} 个节点")
+                    success_count += 1
+                    print(f"    ✅ 成功获取，找到 {len(proxies)} 个节点")
+                else:
+                    print(f"    ⚠️ 获取成功但未找到有效节点")
+                    failed_urls.append(f"# {url} - 无有效节点")
+            else:
+                error_info = error_msg if error_msg else "未知错误"
+                print(f"    ❌ 失败: {error_info}")
+                failed_urls.append(f"# {url} - {error_info}")
             
-            if i < len(urls) - 1:
+            # 避免请求过快
+            if i < total_count - 1:
                 time.sleep(1)
+        
+        # 生成失败链接备注
+        failed_comments = "\n".join(failed_urls) if failed_urls else "# 无失败链接"
         
         # 去重
         unique_proxies = []
@@ -631,16 +677,58 @@ def main():
                 seen.add(key)
                 unique_proxies.append(proxy)
         
-        print(f"  总计: {len(all_proxies)} 个节点，去重后: {len(unique_proxies)} 个")
+        # 统计信息
+        print(f"\n  {'='*30}")
+        print(f"  处理完成统计:")
+        print(f"    总链接数: {total_count}")
+        print(f"    成功获取: {success_count}")
+        print(f"    失败链接: {total_count - success_count}")
+        print(f"    原始节点: {len(all_proxies)} 个")
+        print(f"    去重节点: {len(unique_proxies)} 个")
         
-        # 生成简化配置
+        # 按类型统计
+        type_stats = {}
+        for proxy in unique_proxies:
+            proxy_type = proxy.get('type', 'unknown')
+            type_stats[proxy_type] = type_stats.get(proxy_type, 0) + 1
+        
+        if type_stats:
+            print(f"    节点类型分布:")
+            for proxy_type, count in sorted(type_stats.items()):
+                print(f"      {proxy_type}: {count} 个")
+        else:
+            print(f"    无有效节点")
+        
+        # 生成配置
         if unique_proxies:
             base_name = os.path.splitext(filename)[0]
-            generate_simple_clash_config(unique_proxies, base_name)
+            node_count = generate_clash_config_with_comments(
+                unique_proxies, 
+                base_name, 
+                source_content,
+                success_count,
+                total_count,
+                failed_comments
+            )
+            print(f"\n    ✅ 配置文件生成成功，包含 {node_count} 个节点")
         else:
-            print("  没有有效节点")
+            print("\n    ⚠️ 没有有效节点，生成空配置")
+            # 生成一个空配置，但仍然包含备注
+            empty_proxies = []
+            base_name = os.path.splitext(filename)[0]
+            generate_clash_config_with_comments(
+                empty_proxies,
+                base_name,
+                source_content,
+                success_count,
+                total_count,
+                failed_comments
+            )
     
-    print("\n生成完成！")
+    print(f"\n" + "=" * 70)
+    print(f"生成完成！")
+    print(f"完成时间（北京时间）: {get_beijing_time()}")
+    print("=" * 70)
 
 if __name__ == '__main__':
     main()
