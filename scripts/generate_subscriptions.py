@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-自动订阅生成脚本 - 增强版
+自动订阅生成脚本 - ACL4SSR整合版
 支持 hysteria2, ss, vmess, trojan, vless 协议
-生成简化配置，包含详细备注和统计信息
+整合远程ACL4SSR配置到本地文件
 """
 
 import os
@@ -15,6 +15,11 @@ from datetime import datetime, timezone, timedelta
 from urllib.parse import urlparse, parse_qs, unquote
 import time
 import shutil
+
+# 远程ACL4SSR配置文件
+ACL4SSR_CONFIG_URLS = [
+    "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full.ini"
+]
 
 def get_beijing_time():
     """获取东八区北京时间"""
@@ -68,6 +73,75 @@ def clean_config(config):
             cleaned[key] = value
     
     return cleaned
+
+def fetch_acl4ssr_rules():
+    """获取ACL4SSR远程规则"""
+    all_rules = []
+    
+    for url in ACL4SSR_CONFIG_URLS:
+        try:
+            print(f"获取ACL4SSR规则: {url}")
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            content = response.text
+            # 解析.ini格式的规则
+            rules = parse_acl4ssr_ini(content)
+            all_rules.extend(rules)
+            print(f"  获取成功，包含 {len(rules)} 条规则")
+            
+        except Exception as e:
+            print(f"  获取ACL4SSR规则失败: {e}")
+            # 使用默认规则作为后备
+            all_rules.extend(get_default_rules())
+    
+    return all_rules
+
+def parse_acl4ssr_ini(content):
+    """解析ACL4SSR的.ini格式规则"""
+    rules = []
+    lines = content.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        
+        # 解析规则格式: DOMAIN-SUFFIX,example.com,PROXY
+        if ',' in line:
+            rules.append(line)
+    
+    return rules
+
+def get_default_rules():
+    """获取默认规则（当远程规则失败时使用）"""
+    return [
+        # 国内直连
+        'DOMAIN-SUFFIX,cn,DIRECT',
+        'DOMAIN-SUFFIX,baidu.com,DIRECT',
+        'DOMAIN-SUFFIX,qq.com,DIRECT',
+        'DOMAIN-SUFFIX,taobao.com,DIRECT',
+        'DOMAIN-SUFFIX,jd.com,DIRECT',
+        'DOMAIN-SUFFIX,weibo.com,DIRECT',
+        
+        # 广告拦截
+        'DOMAIN-SUFFIX,ads.com,REJECT',
+        'DOMAIN-KEYWORD,adservice,REJECT',
+        
+        # 流媒体
+        'DOMAIN-SUFFIX,netflix.com,PROXY',
+        'DOMAIN-SUFFIX,disneyplus.com,PROXY',
+        'DOMAIN-SUFFIX,youtube.com,PROXY',
+        
+        # GEOIP
+        'GEOIP,CN,DIRECT',
+        
+        # 最终规则
+        'MATCH,PROXY'
+    ]
 
 def parse_hysteria2(url):
     """解析Hysteria2链接"""
@@ -354,7 +428,7 @@ def parse_proxy_url(url):
     return None
 
 def fetch_subscription(url, timeout=30):
-    """获取订阅内容 - 修复返回值问题"""
+    """获取订阅内容"""
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'text/plain, */*',
@@ -368,9 +442,9 @@ def fetch_subscription(url, timeout=30):
         decoded = safe_decode_base64(content)
         
         if decoded:
-            return decoded, True, None  # 返回三个值
+            return decoded, True, None
         
-        return content, True, None  # 返回三个值
+        return content, True, None
         
     except requests.exceptions.Timeout:
         return None, False, "请求超时"
@@ -400,20 +474,27 @@ def process_subscription_content(content):
     
     return proxies
 
-def generate_clash_config_with_comments(proxies, filename, source_content, success_count, total_count, failed_urls):
-    """生成带备注的Clash配置"""
+def generate_clash_config_with_acl4ssr(proxies, filename, source_content, success_count, total_count, failed_urls):
+    """生成整合ACL4SSR规则的Clash配置"""
     
     # 获取当前时间
     update_time = get_beijing_time()
     
+    # 获取ACL4SSR规则
+    print("获取ACL4SSR规则...")
+    acl4ssr_rules = fetch_acl4ssr_rules()
+    
     # 生成备注
     comments = f"""# ========================================
-# Clash 配置文件
+# Clash 配置文件 - ACL4SSR整合版
 # ========================================
 # 
 # 更新时间（东八区北京时间）: {update_time}
 # 输入源文件: {filename}
 # 订阅链接获取情况: {success_count}/{total_count}
+# 
+# ACL4SSR规则来源:
+# https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full.ini
 # 
 # 失败的链接:
 {failed_urls}
@@ -440,7 +521,7 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
     
     cleaned_proxies = [clean_config(p) for p in proxies if p]
     
-    # Clash配置
+    # 完整的Clash配置，整合ACL4SSR规则
     config = {
         'port': 7890,
         'socks-port': 7891,
@@ -450,63 +531,94 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
         'log-level': 'info',
         'external-controller': '127.0.0.1:9090',
         
+        # DNS设置 - 使用ACL4SSR推荐的DNS
         'dns': {
             'enable': True,
             'ipv6': False,
             'listen': '127.0.0.1:53',
-            'default-nameserver': ['223.5.5.5', '119.29.29.29'],
+            'default-nameserver': [
+                '223.5.5.5',
+                '119.29.29.29',
+                '114.114.114.114'
+            ],
             'enhanced-mode': 'fake-ip',
             'fake-ip-range': '198.18.0.1/16',
-            'nameserver': ['https://doh.pub/dns-query'],
-            'fallback': ['https://dns.cloudflare.com/dns-query'],
+            'nameserver': [
+                'https://doh.pub/dns-query',
+                'https://dns.alidns.com/dns-query',
+                'https://doh.dns.sb/dns-query'
+            ],
+            'fallback': [
+                'https://dns.cloudflare.com/dns-query',
+                'https://dns.google/dns-query',
+                'tls://1.1.1.1:853'
+            ],
             'fallback-filter': {
                 'geoip': True,
-                'ipcidr': ['240.0.0.0/4']
+                'geoip-code': 'CN',
+                'ipcidr': [
+                    '240.0.0.0/4'
+                ]
             }
         },
         
-        'proxies': cleaned_proxies[:200],
+        # 代理节点
+        'proxies': cleaned_proxies[:300],
         
+        # 策略组 - 使用ACL4SSR风格
         'proxy-groups': [
             {
-                'name': '节点选择',
+                'name': '🚀 节点选择',
                 'type': 'select',
-                'proxies': ['自动选择', 'DIRECT']
+                'proxies': ['♻️ 自动选择', '🎯 全球直连', 'DIRECT'] + [p.get('name', '节点') for p in cleaned_proxies[:10]]
             },
             {
-                'name': '自动选择',
+                'name': '♻️ 自动选择',
                 'type': 'url-test',
                 'url': 'http://www.gstatic.com/generate_204',
                 'interval': 300,
                 'tolerance': 50,
-                'proxies': [p.get('name', '节点') for p in cleaned_proxies[:200]]
+                'proxies': [p.get('name', '节点') for p in cleaned_proxies[:100]]
+            },
+            {
+                'name': '🎯 全球直连',
+                'type': 'select',
+                'proxies': ['DIRECT']
+            },
+            {
+                'name': '🛑 广告拦截',
+                'type': 'select',
+                'proxies': ['REJECT', 'DIRECT']
+            },
+            {
+                'name': '📲 电报消息',
+                'type': 'select',
+                'proxies': ['🚀 节点选择', '♻️ 自动选择', '🎯 全球直连']
+            },
+            {
+                'name': '📺 哔哩哔哩',
+                'type': 'select',
+                'proxies': ['🎯 全球直连', '🚀 节点选择', '♻️ 自动选择']
+            },
+            {
+                'name': '🎬 国际媒体',
+                'type': 'select',
+                'proxies': ['🚀 节点选择', '♻️ 自动选择']
+            },
+            {
+                'name': '🍎 苹果服务',
+                'type': 'select',
+                'proxies': ['🚀 节点选择', '🎯 全球直连']
+            },
+            {
+                'name': 'Ⓜ️ 微软服务',
+                'type': 'select',
+                'proxies': ['🚀 节点选择', '🎯 全球直连']
             }
         ],
         
-        'rules': [
-            # 国内域名直连
-            'DOMAIN-SUFFIX,cn,DIRECT',
-            'DOMAIN-SUFFIX,baidu.com,DIRECT',
-            'DOMAIN-SUFFIX,qq.com,DIRECT',
-            'DOMAIN-SUFFIX,taobao.com,DIRECT',
-            'DOMAIN-SUFFIX,jd.com,DIRECT',
-            'DOMAIN-SUFFIX,weibo.com,DIRECT',
-            'DOMAIN-SUFFIX,sina.com,DIRECT',
-            'DOMAIN-SUFFIX,163.com,DIRECT',
-            'DOMAIN-SUFFIX,alibaba.com,DIRECT',
-            'DOMAIN-SUFFIX,alicdn.com,DIRECT',
-            'DOMAIN-SUFFIX,alipay.com,DIRECT',
-            'DOMAIN-SUFFIX,tencent.com,DIRECT',
-            'DOMAIN-SUFFIX,bilibili.com,DIRECT',
-            'DOMAIN-SUFFIX,zhihu.com,DIRECT',
-            'DOMAIN-SUFFIX,douyin.com,DIRECT',
-            
-            # GEOIP中国直连
-            'GEOIP,CN,DIRECT',
-            
-            # 最终规则
-            'MATCH,节点选择'
-        ]
+        # 规则 - 整合ACL4SSR规则
+        'rules': acl4ssr_rules[:500]  # 限制规则数量
     }
     
     config = clean_config(config)
@@ -528,9 +640,10 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
                  width=float("inf"))
     
     print(f"  生成配置文件: {output_path}")
-    print(f"  包含 {len(cleaned_proxies[:200])} 个节点")
+    print(f"  包含 {len(cleaned_proxies[:300])} 个节点")
+    print(f"  包含 {len(acl4ssr_rules[:500])} 条规则")
     
-    return len(cleaned_proxies[:200])
+    return len(cleaned_proxies[:300])
 
 def clear_output_directory():
     """清空输出目录"""
@@ -578,9 +691,9 @@ def read_source_file_content(filepath):
 
 def main():
     """主函数"""
-    print("=" * 70)
-    print("自动订阅生成器 - 增强版")
-    print("=" * 70)
+    print("=" * 80)
+    print("自动订阅生成器 - ACL4SSR整合版")
+    print("=" * 80)
     print(f"开始时间（北京时间）: {get_beijing_time()}")
     
     # 清空输出目录
@@ -639,7 +752,6 @@ https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
             print(f"\n  [{i+1}/{total_count}] 处理链接")
             print(f"    链接: {url[:80]}...")
             
-            # 修复：正确处理三个返回值
             result = fetch_subscription(url, timeout=15)
             content, success, error_msg = result
             
@@ -702,7 +814,7 @@ https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
         # 生成配置
         if unique_proxies:
             base_name = os.path.splitext(filename)[0]
-            node_count = generate_clash_config_with_comments(
+            node_count = generate_clash_config_with_acl4ssr(
                 unique_proxies, 
                 base_name, 
                 source_content,
@@ -716,7 +828,7 @@ https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
             # 生成一个空配置，但仍然包含备注
             empty_proxies = []
             base_name = os.path.splitext(filename)[0]
-            generate_clash_config_with_comments(
+            generate_clash_config_with_acl4ssr(
                 empty_proxies,
                 base_name,
                 source_content,
@@ -725,10 +837,10 @@ https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
                 failed_comments
             )
     
-    print(f"\n" + "=" * 70)
+    print(f"\n" + "=" * 80)
     print(f"生成完成！")
     print(f"完成时间（北京时间）: {get_beijing_time()}")
-    print("=" * 70)
+    print("=" * 80)
 
 if __name__ == '__main__':
     main()
