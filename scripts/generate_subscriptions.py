@@ -354,7 +354,7 @@ def parse_proxy_url(url):
     return None
 
 def fetch_subscription(url, timeout=30):
-    """获取订阅内容"""
+    """获取订阅内容 - 修复返回值问题"""
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'text/plain, */*',
@@ -368,9 +368,9 @@ def fetch_subscription(url, timeout=30):
         decoded = safe_decode_base64(content)
         
         if decoded:
-            return decoded, True
+            return decoded, True, None  # 返回三个值
         
-        return content, True
+        return content, True, None  # 返回三个值
         
     except requests.exceptions.Timeout:
         return None, False, "请求超时"
@@ -539,8 +539,16 @@ def clear_output_directory():
     if os.path.exists(output_dir):
         print(f"清空输出目录: {output_dir}")
         try:
-            shutil.rmtree(output_dir)
-            os.makedirs(output_dir, exist_ok=True)
+            # 只删除文件，保留目录
+            for filename in os.listdir(output_dir):
+                file_path = os.path.join(output_dir, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                except Exception as e:
+                    print(f"删除文件 {file_path} 失败: {e}")
             print("输出目录已清空")
         except Exception as e:
             print(f"清空目录失败: {e}")
@@ -631,7 +639,9 @@ https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
             print(f"\n  [{i+1}/{total_count}] 处理链接")
             print(f"    链接: {url[:80]}...")
             
-            content, success, error_msg = fetch_subscription(url, timeout=15)
+            # 修复：正确处理三个返回值
+            result = fetch_subscription(url, timeout=15)
+            content, success, error_msg = result
             
             if success and content:
                 proxies = process_subscription_content(content)
@@ -643,7 +653,7 @@ https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
                     print(f"    ⚠️ 获取成功但未找到有效节点")
                     failed_urls.append(f"# {url} - 无有效节点")
             else:
-                error_info = error_msg if isinstance(error_msg, str) else "未知错误"
+                error_info = error_msg if error_msg else "未知错误"
                 print(f"    ❌ 失败: {error_info}")
                 failed_urls.append(f"# {url} - {error_info}")
             
@@ -682,9 +692,12 @@ https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
             proxy_type = proxy.get('type', 'unknown')
             type_stats[proxy_type] = type_stats.get(proxy_type, 0) + 1
         
-        print(f"    节点类型分布:")
-        for proxy_type, count in sorted(type_stats.items()):
-            print(f"      {proxy_type}: {count} 个")
+        if type_stats:
+            print(f"    节点类型分布:")
+            for proxy_type, count in sorted(type_stats.items()):
+                print(f"      {proxy_type}: {count} 个")
+        else:
+            print(f"    无有效节点")
         
         # 生成配置
         if unique_proxies:
