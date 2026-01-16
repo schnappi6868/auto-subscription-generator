@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-自动订阅生成脚本 - 完整修复版
+自动订阅生成脚本 - 完整版（嵌入规则集）
 支持 hysteria2, ss, vmess, trojan, vless 协议
-包含ACL4SSR规则，修复YAML格式问题
+下载ACL4SSR规则集并嵌入到配置中
 """
 
 import os
@@ -404,54 +404,104 @@ def process_subscription_content(content):
     
     return proxies
 
+def download_ruleset(url):
+    """下载规则集文件并解析为规则列表"""
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+    
+    try:
+        print(f"    下载规则集: {url}")
+        response = requests.get(url, headers=headers, timeout=30)
+        response.raise_for_status()
+        
+        content = response.text
+        rules = []
+        
+        lines = content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            
+            # 处理各种规则格式
+            if line.startswith('DOMAIN-SUFFIX,'):
+                rules.append(line)
+            elif line.startswith('DOMAIN,'):
+                rules.append(line)
+            elif line.startswith('DOMAIN-KEYWORD,'):
+                rules.append(line)
+            elif line.startswith('IP-CIDR,'):
+                rules.append(line)
+            elif line.startswith('IP-CIDR6,'):
+                rules.append(line)
+            elif line.startswith('GEOIP,'):
+                rules.append(line)
+            elif line.startswith('PROCESS-NAME,'):
+                rules.append(line)
+            elif ',' in line and not line.startswith('['):
+                # 可能是其他格式的规则，尝试直接使用
+                parts = line.split(',')
+                if len(parts) >= 2:
+                    rules.append(line)
+        
+        print(f"      解析出 {len(rules)} 条规则")
+        return rules
+        
+    except Exception as e:
+        print(f"      下载规则集失败: {e}")
+        return []
+
 def load_acl4ssr_rules():
-    """加载ACL4SSR规则"""
-    acl4ssr_urls = [
-        "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/config/ACL4SSR_Online_Full.ini"
-    ]
+    """下载并加载ACL4SSR规则集（嵌入到配置中）"""
+    print("  下载ACL4SSR规则集...")
+    
+    # ACL4SSR规则集URL
+    rule_sets = {
+        'LocalAreaNetwork': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/LocalAreaNetwork.list',
+        'UnBan': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/UnBan.list',
+        'Advertising': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Advertising.list',
+        'AdvertisingVideo': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/AdvertisingVideo.list',
+        'ChinaDomain': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaDomain.list',
+        'ChinaCompanyIp': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaCompanyIp.list',
+        'ChinaIp': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaIp.list',
+        'Apple': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Apple.list',
+        'Microsoft': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Microsoft.list',
+        'GlobalMedia': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/GlobalMedia.list',
+        'ProxyGFWlist': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ProxyGFWlist.list',
+        'BanAD': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list',
+        'BanProgramAD': 'https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanProgramAD.list',
+    }
     
     all_rules = []
     
-    for url in acl4ssr_urls:
-        try:
-            print(f"  加载ACL4SSR规则: {url}")
-            headers = {'User-Agent': 'Mozilla/5.0'}
-            response = requests.get(url, headers=headers, timeout=30)
-            response.raise_for_status()
+    # 下载每个规则集
+    for rule_name, rule_url in rule_sets.items():
+        rules = download_ruleset(rule_url)
+        if rules:
+            # 为规则添加策略组
+            processed_rules = []
+            for rule in rules:
+                # 根据规则类型分配策略组
+                if 'LocalAreaNetwork' in rule_name or 'China' in rule_name:
+                    # 国内和局域网规则直连
+                    processed_rules.append(rule + ',DIRECT')
+                elif 'Advertising' in rule_name or 'BanAD' in rule_name:
+                    # 广告规则拒绝
+                    processed_rules.append(rule + ',REJECT')
+                elif 'Apple' in rule_name or 'Microsoft' in rule_name:
+                    # 苹果和微软服务走代理
+                    processed_rules.append(rule + ',节点选择')
+                elif 'GlobalMedia' in rule_name or 'Proxy' in rule_name:
+                    # 全球媒体和代理列表走代理
+                    processed_rules.append(rule + ',节点选择')
+                else:
+                    # 其他规则直连
+                    processed_rules.append(rule + ',DIRECT')
             
-            content = response.text
-            lines = content.split('\n')
-            
-            for line in lines:
-                line = line.strip()
-                # 只提取规则行，跳过注释和空行
-                if line and not line.startswith('#') and not line.startswith('[') and '=' in line:
-                    # 格式转换
-                    if ',' in line:
-                        # 已经是Clash格式的规则
-                        all_rules.append(line)
-                    elif '=' in line:
-                        # 可能是Surge格式，尝试转换
-                        parts = line.split('=', 1)
-                        if len(parts) == 2:
-                            domain_pattern = parts[0].strip()
-                            policy = parts[1].strip()
-                            # 简单转换，实际可能需要更复杂的逻辑
-                            if domain_pattern.startswith('DOMAIN-SUFFIX'):
-                                all_rules.append(f"{domain_pattern},{policy}")
-                            elif domain_pattern.startswith('DOMAIN'):
-                                all_rules.append(f"{domain_pattern},{policy}")
-                            elif domain_pattern.startswith('IP-CIDR'):
-                                all_rules.append(f"{domain_pattern},{policy}")
-                            elif domain_pattern.startswith('GEOIP'):
-                                all_rules.append(f"{domain_pattern},{policy}")
-            
-            print(f"    从 {url} 加载 {len([r for r in all_rules if url in r])} 条规则")
-            
-        except Exception as e:
-            print(f"    加载ACL4SSR规则失败 {url}: {e}")
+            all_rules.extend(processed_rules)
     
-    # 如果没有成功加载远程规则，使用内置规则
+    # 如果没有成功下载规则，使用内置规则
     if not all_rules:
         print("  使用内置规则")
         all_rules = [
@@ -462,8 +512,15 @@ def load_acl4ssr_rules():
             'IP-CIDR,192.168.0.0/16,DIRECT',
             'IP-CIDR,10.0.0.0/8,DIRECT',
             'IP-CIDR,100.64.0.0/10,DIRECT',
+            'IP-CIDR,169.254.0.0/16,DIRECT',
             
-            # 国内主要域名
+            # 广告屏蔽
+            'DOMAIN-KEYWORD,adservice,REJECT',
+            'DOMAIN-SUFFIX,doubleclick.net,REJECT',
+            'DOMAIN-SUFFIX,googleadservices.com,REJECT',
+            'DOMAIN-SUFFIX,googlesyndication.com,REJECT',
+            
+            # 国内主要域名直连
             'DOMAIN-SUFFIX,cn,DIRECT',
             'DOMAIN-SUFFIX,baidu.com,DIRECT',
             'DOMAIN-SUFFIX,qq.com,DIRECT',
@@ -482,17 +539,25 @@ def load_acl4ssr_rules():
             'DOMAIN-SUFFIX,zhihu.com,DIRECT',
             'DOMAIN-SUFFIX,douyin.com,DIRECT',
             
-            # 广告屏蔽
-            'DOMAIN-SUFFIX,doubleclick.net,REJECT',
-            'DOMAIN-KEYWORD,adservice,REJECT',
-            'DOMAIN-SUFFIX,googleadservices.com,REJECT',
+            # 苹果服务
+            'DOMAIN-SUFFIX,apple.com,节点选择',
+            'DOMAIN-SUFFIX,icloud.com,节点选择',
+            'DOMAIN-SUFFIX,appstore.com,节点选择',
+            'DOMAIN-SUFFIX,itunes.com,节点选择',
             
-            # 流媒体
+            # 微软服务
+            'DOMAIN-SUFFIX,microsoft.com,节点选择',
+            'DOMAIN-SUFFIX,windows.com,节点选择',
+            'DOMAIN-SUFFIX,office.com,节点选择',
+            'DOMAIN-SUFFIX,live.com,节点选择',
+            
+            # 全球媒体
             'DOMAIN-SUFFIX,netflix.com,节点选择',
             'DOMAIN-SUFFIX,disneyplus.com,节点选择',
             'DOMAIN-SUFFIX,hbo.com,节点选择',
             'DOMAIN-SUFFIX,hulu.com,节点选择',
             'DOMAIN-SUFFIX,youtube.com,节点选择',
+            'DOMAIN-SUFFIX,twitch.tv,节点选择',
             
             # 常用国外网站
             'DOMAIN-SUFFIX,google.com,节点选择',
@@ -500,26 +565,47 @@ def load_acl4ssr_rules():
             'DOMAIN-SUFFIX,twitter.com,节点选择',
             'DOMAIN-SUFFIX,facebook.com,节点选择',
             'DOMAIN-SUFFIX,instagram.com,节点选择',
+            'DOMAIN-SUFFIX,reddit.com,节点选择',
+            'DOMAIN-SUFFIX,wikipedia.org,节点选择',
             
             # GEOIP
             'GEOIP,CN,DIRECT',
+            'GEOIP,PRIVATE,DIRECT',
             
             # 最终规则
             'MATCH,节点选择'
         ]
     
-    # 移除重复规则
+    # 移除重复规则并确保顺序
     unique_rules = []
     seen = set()
+    
+    # 先添加DIRECT规则
+    for rule in all_rules:
+        if ',DIRECT' in rule and rule not in seen:
+            seen.add(rule)
+            unique_rules.append(rule)
+    
+    # 然后添加REJECT规则
+    for rule in all_rules:
+        if ',REJECT' in rule and rule not in seen:
+            seen.add(rule)
+            unique_rules.append(rule)
+    
+    # 最后添加代理规则
     for rule in all_rules:
         if rule not in seen:
             seen.add(rule)
             unique_rules.append(rule)
     
-    return unique_rules
+    # 确保MATCH规则在最后
+    match_rules = [r for r in unique_rules if r.startswith('MATCH,')]
+    other_rules = [r for r in unique_rules if not r.startswith('MATCH,')]
+    
+    return other_rules + match_rules
 
 def generate_clash_config_with_comments(proxies, filename, source_content, success_count, total_count, failed_urls):
-    """生成带备注的Clash配置"""
+    """生成带备注的Clash配置（嵌入规则集）"""
     
     # 获取当前时间
     update_time = get_beijing_time()
@@ -558,12 +644,33 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
     
     cleaned_proxies = [clean_config(p) for p in proxies if p]
     
-    # 加载ACL4SSR规则
-    print("  加载ACL4SSR规则...")
+    # 加载规则集
+    print("  加载规则集...")
     rules = load_acl4ssr_rules()
-    print(f"  加载 {len(rules)} 条规则")
+    print(f"  加载完成，共 {len(rules)} 条规则")
     
-    # Clash配置 - 修复格式
+    # 检查规则中是否有无效的策略组引用
+    valid_proxy_names = ['DIRECT', 'REJECT', '节点选择', '自动选择'] + [p.get('name', '') for p in cleaned_proxies]
+    filtered_rules = []
+    
+    for rule in rules:
+        # 确保规则格式正确
+        if ',' in rule:
+            parts = rule.split(',')
+            if len(parts) >= 2:
+                proxy_ref = parts[-1]
+                if proxy_ref in valid_proxy_names:
+                    filtered_rules.append(rule)
+                else:
+                    # 替换为有效的策略组
+                    rule_fixed = ','.join(parts[:-1]) + ',节点选择'
+                    filtered_rules.append(rule_fixed)
+            else:
+                filtered_rules.append(rule)
+        else:
+            filtered_rules.append(rule)
+    
+    # Clash配置 - 使用嵌入的规则
     config = {
         'port': 7890,
         'socks-port': 7891,
@@ -572,6 +679,7 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
         'mode': 'Rule',
         'log-level': 'info',
         'external-controller': '0.0.0.0:9090',
+        'secret': '',
         
         'dns': {
             'enable': True,
@@ -612,11 +720,22 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
                 'type': 'url-test',
                 'url': 'http://www.gstatic.com/generate_204',
                 'interval': 300,
+                'tolerance': 50,
                 'proxies': [p.get('name', '节点') for p in cleaned_proxies[:200]]
+            },
+            {
+                'name': 'REJECT',
+                'type': 'select',
+                'proxies': ['REJECT']
+            },
+            {
+                'name': 'DIRECT',
+                'type': 'select',
+                'proxies': ['DIRECT']
             }
         ],
         
-        'rules': rules
+        'rules': filtered_rules
     }
     
     config = clean_config(config)
@@ -627,12 +746,11 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
     
     output_path = os.path.join(output_dir, f'{filename}.yaml')
     
-    # 使用安全的方式写入YAML
     try:
         with open(output_path, 'w', encoding='utf-8') as f:
             # 写入备注
             f.write(comments)
-            # 写入配置，确保正确的YAML格式
+            # 写入配置
             yaml_str = yaml.dump(
                 config, 
                 allow_unicode=True, 
@@ -640,47 +758,43 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
                 sort_keys=False,
                 width=float("inf"),
                 explicit_start=False,
-                explicit_end=False
+                explicit_end=False,
+                default_style=None
             )
-            # 修复规则中的LAN问题
-            yaml_str = yaml_str.replace('LAN', 'DIRECT')
+            
+            # 确保YAML格式正确
+            yaml_str = yaml_str.replace('!!str ', '')
+            yaml_str = yaml_str.replace('!!map ', '')
+            yaml_str = yaml_str.replace('!!seq ', '')
+            
             f.write(yaml_str)
         
         print(f"  生成配置文件: {output_path}")
         print(f"  包含 {len(cleaned_proxies[:200])} 个节点")
-        print(f"  包含 {len(rules)} 条规则")
+        print(f"  包含 {len(filtered_rules)} 条嵌入规则")
         
-        # 验证YAML格式
+        # 验证文件格式
         try:
             with open(output_path, 'r', encoding='utf-8') as f:
-                yaml_content = f.read()
-                # 检查是否有无效的代理名称
-                if 'LAN' in yaml_content:
-                    print("  ⚠️ 警告: 配置中包含LAN，已自动替换为DIRECT")
-                test_config = yaml.safe_load(yaml_content)
-                if test_config and 'proxies' in test_config:
-                    print(f"  ✅ YAML格式验证成功")
+                content = f.read()
+                # 检查关键部分
+                if 'proxies:' in content and 'proxy-groups:' in content and 'rules:' in content:
+                    # 尝试解析YAML
+                    test_config = yaml.safe_load(content.split('# ========================================')[-1])
+                    if test_config and isinstance(test_config, dict):
+                        print("  ✅ 配置文件格式验证成功")
+                    else:
+                        print("  ⚠️ 配置文件格式验证警告")
                 else:
-                    print(f"  ⚠️ YAML格式验证警告: 配置文件结构不完整")
-        except yaml.YAMLError as e:
-            print(f"  ❌ YAML格式验证失败: {e}")
-            # 尝试修复
-            try:
-                # 移除可能导致问题的字符
-                with open(output_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                content = content.replace('!!str ', '')
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    f.write(content)
-                print("  ✅ 已尝试修复YAML格式")
-            except:
-                pass
+                    print("  ❌ 配置文件缺少关键部分")
+        except Exception as e:
+            print(f"  ⚠️ 配置文件验证异常: {e}")
         
     except Exception as e:
         print(f"  ❌ 写入文件失败: {e}")
-        # 生成最小化配置作为备份
+        # 生成最小化备份配置
         backup_config = {
-            'proxies': cleaned_proxies[:50],
+            'proxies': cleaned_proxies[:50] if cleaned_proxies else [],
             'proxy-groups': [
                 {
                     'name': 'PROXY',
@@ -690,10 +804,14 @@ def generate_clash_config_with_comments(proxies, filename, source_content, succe
             ],
             'rules': ['MATCH,PROXY']
         }
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(comments)
-            yaml.dump(backup_config, f, allow_unicode=True, default_flow_style=False)
-        print(f"  ✅ 已生成备份配置文件")
+        
+        try:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                f.write(comments)
+                yaml.dump(backup_config, f, allow_unicode=True, default_flow_style=False)
+            print("  ✅ 已生成备份配置文件")
+        except:
+            print("  ❌ 备份配置文件生成失败")
     
     return len(cleaned_proxies[:200])
 
@@ -743,7 +861,7 @@ def read_source_file_content(filepath):
 def main():
     """主函数"""
     print("=" * 70)
-    print("自动订阅生成器 - 完整修复版")
+    print("自动订阅生成器 - 嵌入规则集版")
     print("=" * 70)
     print(f"开始时间（北京时间）: {get_beijing_time()}")
     
