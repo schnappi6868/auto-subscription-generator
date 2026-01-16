@@ -1,54 +1,31 @@
 port: 7890
 socks-port: 7891
 mixed-port: 7893
-allow-lan: true
-mode: Rule
+allow-lan: false
+mode: rule
 log-level: info
-external-controller: 0.0.0.0:9090
-secret: ''
+external-controller: 127.0.0.1:9090
 dns:
   enable: true
-  listen: 0.0.0.0:53
+  ipv6: false
+  listen: 127.0.0.1:53
   default-nameserver:
   - 223.5.5.5
-  - 8.8.8.8
+  - 119.29.29.29
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   nameserver:
   - https://doh.pub/dns-query
   - https://dns.alidns.com/dns-query
   fallback:
-  - https://1.1.1.1/dns-query
-  - https://dns.google/dns-query
+  - https://doh.dns.sb/dns-query
+  - https://dns.cloudflare.com/dns-query
+  fallback-filter:
+    geoip: true
+    ipcidr:
+    - 240.0.0.0/4
 proxies:
-- name: 剩余流量：89.01 GB
-  type: hysteria2
-  server: hkzl1.vyunyunnode.top
-  port: 49000
-  password: /e97be888-f728-4ef7-baab-7bcd504564ce
-  sni: hkzl1.vyunyunnode.top
-  skip-cert-verify: true
-  down: 100 Mbps
-  up: 100 Mbps
-- name: 距离下次重置剩余：27 天
-  type: hysteria2
-  server: hkzl1.vyunyunnode.top
-  port: 49000
-  password: /e97be888-f728-4ef7-baab-7bcd504564ce
-  sni: hkzl1.vyunyunnode.top
-  skip-cert-verify: true
-  down: 100 Mbps
-  up: 100 Mbps
-- name: 套餐到期：2028-02-12
-  type: hysteria2
-  server: hkzl1.vyunyunnode.top
-  port: 49000
-  password: /e97be888-f728-4ef7-baab-7bcd504564ce
-  sni: hkzl1.vyunyunnode.top
-  skip-cert-verify: true
-  down: 100 Mbps
-  up: 100 Mbps
-- name: 香港1直连
+- name: 剩余流量：89 GB
   type: hysteria2
   server: hkzl1.vyunyunnode.top
   port: 49000
@@ -107,8 +84,6 @@ proxies:
   server: hgzl.vyunyunnode.top
   port: 44098
   password: /e97be888-f728-4ef7-baab-7bcd504564ce
-  sni: hgzl.vyunyunnode.top
-  skip-cert-verify: false
   down: 100 Mbps
   up: 100 Mbps
 - name: 美国🇺🇸直连02
@@ -453,15 +428,6 @@ proxies:
   skip-cert-verify: true
   udp: true
   network: ws
-- name: 请立即到官网下载新客户端！
-  type: trojan
-  server: 0.0.0.0
-  port: 443
-  password: 4e8e9d60-9198-432a-8bd6-b6770816fe99
-  sni: 0.0.0.0
-  skip-cert-verify: true
-  udp: true
-  network: ws
 - name: 您正在使用的是最新客户端
   type: vless
   server: 0.0.0.0
@@ -773,722 +739,6 @@ proxies:
   cipher: aes-256-gcm
   password: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
   udp: true
-- name: 套餐到期：长期有效
-  type: ss
-  server: 120.77.38.81
-  port: 11235
-  cipher: aes-256-gcm
-  password: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-- name: 🇺🇸US@Bosa佬赞助
-  type: ss
-  server: 120.77.38.81
-  port: 11235
-  cipher: aes-256-gcm
-  password: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-- name: 🇭🇰HK@wuan佬赞助
-  type: vless
-  server: 69.165.68.74
-  port: 41729
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: VSu8Npx_2YAUzvuvxNGEFQqc7w7qR4sVcfPEPr6TEx0
-    short-id: 5722f432
-- name: 🇭🇰HK@Eliot.H佬赞助
-  type: vless
-  server: 156.226.172.48
-  port: 37529
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: gKIcdy39rWD4fLOI_C45MQZGLtxbxfVQR6bwlJKwHm4
-    short-id: 75720fa8
-- name: 🇭🇰HK@CBH佬赞助
-  type: vless
-  server: 143.20.156.89
-  port: 3344
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: 9BycpW9tNYhkzD7K4F94DOrrZJcSjZ770HHsGCbNRyc
-    short-id: e78350
-- name: 🇭🇰HK@Bosa佬赞助
-  type: vless
-  server: 172.81.111.123
-  port: 3344
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: kIMVupsDeGRH_L1_vcdHyoStMkMxh5T2iv8vXjfnJiU
-    short-id: 15cf2558e503
-- name: 🇭🇰HK@xingcxx佬赞助
-  type: vless
-  server: 84.54.2.244
-  port: 3344
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: Tv3o2i-JHYBA8ay7ZwUXYG3s212dUHAqBasA3ZG0vDY
-    short-id: 68e3de
-- name: 🇭🇰HK@linxi_2650佬赞助
-  type: vless
-  server: 151.242.11.181
-  port: 47939
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: rgHRZ7ozcfKZLxG4CZHxwKNYqsSrafRxc3ctzZhZY0M
-    short-id: d9ab94b6
-- name: 🇭🇰HK@linlee佬赞助
-  type: vless
-  server: 91.229.132.22
-  port: 1314
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: iVuN9MrFn4kNyMLcgOg-EZXlayDMxWr4mDbZEQ0L7Hw
-    short-id: e479be9de6
-- name: 🇯🇵JP-1@Yoga佬赞助
-  type: vless
-  server: 141.147.170.17
-  port: 55794
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: rhmzAwWbh2JyK_t3YMqoMXI9hvmbM543lbJtJ1FnFg0
-    short-id: a40e7740
-- name: 🇯🇵JP-2@Yoga佬赞助
-  type: vless
-  server: 47.79.89.28
-  port: 63994
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: j3uEPzEcOET7XWDykVWgvOEflrH1Z7R-MdMGCXuHtBs
-    short-id: e3815d7b
-- name: 🇯🇵JP@Binbim佬赞助
-  type: vless
-  server: 156.246.92.242
-  port: 52111
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: te0SPJIPzqpsALKKB7wdByjgNF1yLz9En2BDapq9AE0
-    short-id: f0b120af
-- name: 🇯🇵JP@Cyclops佬赞助
-  type: vless
-  server: 45.196.233.52
-  port: 33053
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: DKRu6F8hRscl1ybIHDI7AcRkuwzH0LQUWuIim1d_vnI
-    short-id: 00dc3e
-- name: 🇯🇵JP@dingz佬赞助
-  type: vless
-  server: 47.79.91.66
-  port: 53654
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: L8GMDv7PjGwX0ORBeVQdEfVkfLEsDEeht8sGrNQHplI
-    short-id: aca8f252
-- name: 🇯🇵JP@wjzhu佬赞助
-  type: vless
-  server: 140.245.90.74
-  port: 50931
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: C26uc12dfmQc2BvZyMxO0DsZHB3G0DwL641lnP1KwCg
-    short-id: 697273c5
-- name: 🇸🇬SG@shiyang佬赞助
-  type: vless
-  server: 178.128.104.215
-  port: 40972
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: o2rlhaSweKwEfh3ouGSmSlokeuT4CTfHaie9N07eUW4
-    short-id: b7c3d884
-- name: 🇸🇬SG@cai6佬赞助
-  type: vless
-  server: 159.65.136.161
-  port: 3344
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: zcuH3bIu4eTI8hjRwiB5Z9BgZZC3qiZhcRQd9x4lm0k
-    short-id: f93fcb
-- name: 🇸🇬SG@xcdeveloper佬赞助
-  type: vless
-  server: 161.118.212.29
-  port: 30917
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: AlLp_Pj5hamY19GZmED13DRRtVlj9aNFaPOgI1ibph0
-    short-id: dd7d56c9
-- name: 🇸🇬SG@zea佬赞助
-  type: vless
-  server: 47.79.119.154
-  port: 46122
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: vYsj4iVNykZsaA470fENV92skTntdwFra6MsNBiceDc
-    short-id: 0a3f
-- name: 🇸🇬SG@wwang佬赞助
-  type: vless
-  server: 140.245.62.49
-  port: 43936
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: _miCWM8pWj5JaUpERkqC9he-4VQR7viApaWiLmXWzgU
-    short-id: b906bf7c
-- name: 🇸🇬SG@yuemanly佬赞助
-  type: vless
-  server: 185.151.146.123
-  port: 32509
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: eK6rIG7iyBH_OV_MZOYHvpK0WvvPXNZEYtfmWEbTknY
-    short-id: d17a6c37
-- name: 🇸🇬SG-yltf佬赞助
-  type: vless
-  server: sg1.yltb.tech
-  port: 2053
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: cdn.jsdelivr.net
-  network: xhttp
-  reality-opts:
-    public-key: 9GKn2HGx1l55xuw7duib5j1dtLZNOJo2V_uL4Iitjj0
-    short-id: ''
-- name: 🇺🇸US-1@LRWF佬赞助
-  type: vless
-  server: 138.197.214.79
-  port: 32236
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: pPhOIGuinYzXr1rteJPCWGjA5Xh4e4z1aMQkdUFP4l8
-    short-id: 5fbffbda
-- name: 🇺🇸US-2@LRWF佬赞助
-  type: vless
-  server: 159.89.153.29
-  port: 60685
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: OvBh6uauecwBrMEGX2P7tugU5vUe-ZGn7XpGxqPZJwU
-    short-id: db1de20c
-- name: 🇺🇸US-3@LRWF佬赞助
-  type: vless
-  server: 157.245.228.156
-  port: 46994
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: levPYRPlzIdxlR2rXm6Q2fX4khAUkSgcvTb1yviulEk
-    short-id: 8a431c65
-- name: 🇺🇸US@Tokinx佬赞助
-  type: vless
-  server: 206.189.172.168
-  port: 33035
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: Vn_X79b3xRVmLtcMaa2qLQDZIBhMmg_O7xG7W7RL4HM
-    short-id: 4a4d56d0
-- name: 🇺🇸US-2@qingfenghao佬赞助
-  type: vless
-  server: 161.129.65.119
-  port: 58151
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: 0Ykahutes0212LNMXUgTbSxadUDSQsXN-vflquFgGXY
-    short-id: 47245e18
-- name: 🇺🇸US@yzfh佬赞助
-  type: vless
-  server: 173.214.169.120
-  port: 64035
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: SI289Xp2MDXl4qT6oluhNFpxQzzwugpIIBQMD6jO_wY
-    short-id: 85ff4d25
-- name: 🇺🇸US@csgwu佬赞助
-  type: vless
-  server: 204.152.192.136
-  port: 58141
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: on0gHc882fX5BK3hCT03Ee_lWnIzdARnGzcjXuZOvhw
-    short-id: 245d1efc
-- name: 🇺🇸US@hx3251佬赞助
-  type: vless
-  server: 192.210.179.29
-  port: 36644
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: URk8HznO6Z54DOasyye6v3OA3v8xOr0RDriJg-BPt0c
-    short-id: 52c6c2f3
-- name: 🇺🇸US@goldenhawk佬赞助
-  type: vless
-  server: 107.172.51.200
-  port: 61475
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: SzWyOMyaZOuTYOlDjmWQzFp3npwTf4yRHP1QUkAD3g8
-    short-id: 0e439dd2
-- name: 🇺🇸US@Yoga佬赞助
-  type: vless
-  server: 107.148.225.67
-  port: 61360
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: QGlSHbJjU2AiJBRYeCpKPbtl7oIhd3SthkIKlXovs10
-    short-id: 545cf8b2
-- name: 🇺🇸US@houzai佬赞助
-  type: vless
-  server: 107.174.82.100
-  port: 3344
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: a5y-QX49e_1XYpnCo47gtsEJ07gojpWK5QNRgrcp23A
-    short-id: 2b
-- name: 🇺🇸US@3rd佬赞助
-  type: vless
-  server: 209.141.42.234
-  port: 63749
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: eVPXkj2tjULbe9bQ_IIOciNWKjwokFAYFpxNwfKsdCA
-    short-id: e2e26a50
-- name: 🇺🇸US@Handsomedog佬赞助
-  type: vless
-  server: 198.12.77.130
-  port: 3344
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: NI5gnv_A0UMQ1j-Niqo5pFN_q7BtCjmJhoWczCbaD04
-    short-id: 16f6ef0bdedb
-- name: 🇺🇸US@Ling_Anthony佬赞助
-  type: vless
-  server: 107.174.181.18
-  port: 34395
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: qZWZGBwJ5OnBLshoVIh0vuXIFd4gJ3L2G-HAWx2P0k0
-    short-id: 40c59ea9
-- name: 🇺🇸US@kikii佬赞助
-  type: vless
-  server: 107.172.87.191
-  port: 19383
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: apple.com
-  network: tcp
-  reality-opts:
-    public-key: HL4VXT0TNBpibpsxtSIL9XEp0rYXaqTRdvnO9C6vxBA
-    short-id: f794c8dfb5c0
-- name: 🇺🇸US@lyrnox佬赞助
-  type: vless
-  server: 107.174.52.110
-  port: 30638
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: IO82kPIhQDmEPquyYmTrjsjh9387N0NvLyK0qHseD18
-    short-id: a063a883
-- name: 🇺🇸US@TAOZHANG佬赞助
-  type: vless
-  server: 154.23.172.31
-  port: 56147
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: oSj537KpklBsUhKRaFp9mWa1MDi2xQnHf0mI74Hqpms
-    short-id: ed47cf7f
-- name: 🇺🇸US@zwz211123佬赞助
-  type: vless
-  server: 38.34.14.69
-  port: 32268
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: cYV9MVneh9TForprrU_7ldEgqnDzBVTznh_wVvgVVUE
-    short-id: c0413524
-- name: 🇺🇸US@wise_bird佬赞助
-  type: vless
-  server: 23.166.168.101
-  port: 65445
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: W2QmPwqxxxqAgX96NSUy0Q65JAOduTAKOSvhOWdNlzc
-    short-id: a9a6210b
-- name: 🇺🇸US@laoqiao佬赞助
-  type: vless
-  server: 5.175.184.72
-  port: 41295
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: EBl_UcCMQFHTtaaNOMSbnaYdaMiTORfJQZHabH2iySA
-    short-id: 37b58ad1
-- name: 🇺🇸US@hl128k佬赞助
-  type: vless
-  server: 23.94.212.40
-  port: 52801
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: 4INW4caLQnb9k_Nkx2_7kMuUZyzn2jndY73zAdArsx8
-    short-id: 64a02f94
-- name: 🇺🇸US@Iguang9881佬赞助
-  type: vless
-  server: 23.226.134.134
-  port: 35874
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: wxeP5XSLK3nN-K2U0Cc2j6vS_LvTMq9hfePA4lXR5Rg
-    short-id: 166cebd6
-- name: 🇺🇸US@123nhh佬赞助
-  type: vless
-  server: 66.92.50.235
-  port: 59211
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: vZS7qYjWMKW_29yzSfan8ZKcz3p0rmcGymklQlB7ITg
-    short-id: 5e24ebda
-- name: 🇺🇸US@dong佬赞助
-  type: vless
-  server: 167.99.53.187
-  port: 38062
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: RoL7AlLADybmlEg0WyJ7I52NeoTqjWHn7DC1SBpEn0E
-    short-id: e3623edd
-- name: 🇨🇦CA@Tokinx佬赞助
-  type: vless
-  server: 159.203.3.63
-  port: 57433
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: xfhg5CJhIOCJVqk279495MTBIN5GMW4jPC4PlGk2WVQ
-    short-id: 93bc36db
-- name: 🇨🇦CA@aaa3055佬赞助
-  type: vless
-  server: 207.174.40.215
-  port: 30547
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: FbtzoqI2rUh-ZM_YmBf3wztjVnz8iIj-qqr2vdm2fkA
-    short-id: 75ed7d66
-- name: 🇮🇳IN@dingz佬赞助
-  type: vless
-  server: 80.225.206.101
-  port: 62384
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: lbblf5r9piPCEfbNHg79lDCrXrKS4Bh4OE4tp40oGhE
-    short-id: e5c85d1b
-- name: 🇳🇱NL@cai6佬赞助
-  type: vless
-  server: 68.183.8.190
-  port: 3344
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: Tg0ljjeQ7V8B9rkGRxc-QA5b5fvHzsqc4ASEwIP0DHA
-    short-id: 4dc9
-- name: 🇹🇷TR@Rainbear佬赞助
-  type: vless
-  server: 185.219.132.112
-  port: 34874
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: TsmdGB_RBH_88NrpfIq4h5VN3Vn4x0G7nrvQWU5G_Ws
-    short-id: cad5a0b0
-- name: 🇬🇧GB@Ksoyoung佬赞助
-  type: vless
-  server: 185.85.242.140
-  port: 52868
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: vzsePL_4PUY8mU-NuLjd4m2UKTbdmmva_2UfSRgCfEI
-    short-id: da429a60
-- name: 🇩🇪DE@laoqiao佬赞助
-  type: vless
-  server: 109.71.253.17
-  port: 48745
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: 0JgOrkTwXgAGOhu_OKzOjHd4VRHyXQ9ns8wj0mKNeWo
-    short-id: 0b0ddf6a
-- name: 🇩🇪DE@hl128k佬赞助
-  type: vless
-  server: 31.57.241.27
-  port: 38432
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: aH2hWUwcv735PN82fd4Cnq9rvaRJX3g7GSzvqw1KeAk
-    short-id: 2727f039
-- name: 🇦🇺AU@FF_Crazy佬赞助
-  type: vless
-  server: 170.64.233.74
-  port: 31874
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: kcVEhk0YL3UzCz2QsFnaM3VebHMdZ6zCiMj2i0-X41I
-    short-id: 00dc0f8d
-- name: 🇲🇩MD@terence佬赞助
-  type: vless
-  server: 217.156.67.93
-  port: 47949
-  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-  tls: true
-  skip-cert-verify: false
-  servername: tesla.com
-  network: tcp
-  reality-opts:
-    public-key: Q_eUYoTgZSez8tYJ0e519POQjk630s5Iy1mTOyAtJ18
-    short-id: ddeb6c3d
 - name: 🇺🇸US-r佬赞助
   type: vless
   server: 154.26.184.2
@@ -1509,33 +759,110 @@ proxies:
   skip-cert-verify: false
   servername: learn.cpplang.ggff.net
   network: httpupgrade
+- name: 🇺🇸US5x家宽-bai佬赞助
+  type: vless
+  server: 154.26.176.67
+  port: 10734
+  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
+  udp: true
+  tls: true
+  skip-cert-verify: false
+  servername: learn.cpplang.ggff.net
+  network: httpupgrade
+- name: 🇺🇸US5x家宽-wz佬赞助
+  type: vless
+  server: 38.207.163.72
+  port: 56328
+  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
+  udp: true
+  tls: true
+  skip-cert-verify: false
+  servername: learn.cpplang.ggff.net
+  network: httpupgrade
+- name: 剩余流量：54.2 GB
+  type: trojan
+  server: sssg01.go52pokemon.com
+  port: 55016
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+  network: tcp
+- name: 🇭🇰【亚洲】香港01丨AWS【2x】
+  type: ss
+  server: hkbgp.xsaym.com
+  port: 54257
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇭🇰【亚洲】香港01丨V6【1x】
+  type: trojan
+  server: v601.xsaym.com
+  port: 54357
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+  network: tcp
+- name: 🇭🇰【亚洲】香港02丨V6【1x】
+  type: trojan
+  server: v602.xsaym.com
+  port: 54357
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+  network: tcp
+- name: 🇸🇬【亚洲】新加坡01丨专线【3x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 55016
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+  network: tcp
+- name: 🇸🇬【亚洲】新加坡03丨专线【3x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 55015
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+  network: tcp
+- name: 🇸🇬【亚洲】新加坡05丨AWS【2x】
+  type: ss
+  server: hkbgp.xsaym.com
+  port: 54258
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇸🇬【亚洲】新加坡07丨V6【1x】
+  type: ss
+  server: v601.xsaym.com
+  port: 54258
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
 proxy-groups:
-- name: 🚀 节点选择
+- name: PROXY
   type: select
   proxies:
-  - ♻️ 自动选择
-  - 🎯 全球直连
   - DIRECT
-  - 剩余流量：89.01 GB
-  - 距离下次重置剩余：27 天
-  - 套餐到期：2028-02-12
-  - 香港1直连
+  - REJECT
+  - Auto
+  - 剩余流量：89 GB
   - 香港2直连
   - 香港3直连
   - 台湾家宽直连
   - 美国🇺🇸直连
-  - 新加坡🇸🇬直连
-  - 韩国直连
-- name: ♻️ 自动选择
+- name: Auto
   type: url-test
   url: http://www.gstatic.com/generate_204
   interval: 300
-  tolerance: 50
   proxies:
-  - 剩余流量：89.01 GB
-  - 距离下次重置剩余：27 天
-  - 套餐到期：2028-02-12
-  - 香港1直连
+  - 剩余流量：89 GB
   - 香港2直连
   - 香港3直连
   - 台湾家宽直连
@@ -1565,76 +892,31 @@ proxy-groups:
   - 🇯🇵日本06
   - 泰国🇹🇭01
   - 🇩🇪德国01
-  - 🇩🇪德国02
-  - 🇲🇾马来西亚
-  - 🇨🇦加拿大01
-  - 🇮🇸冰岛
-  - 🇲🇽墨西哥01
-  - 🇵🇱波兰01
-  - 🇨🇭瑞士01
-  - 🇰🇷韩国01
-  - 🇫🇷法国01
-  - 🇧🇪比利时01
-  - 越南🇻🇳01
-  - 越南🇻🇳02
-  - 🇨🇳台湾01
-  - 🇨🇳台湾02
-  - 🇨🇳台湾03
-  - 🇨🇳台湾04家宽
-  - 🇨🇳台湾家宽05
-- name: 📺 哔哩哔哩
+- name: Streaming
   type: select
   proxies:
-  - 🚀 节点选择
-  - ♻️ 自动选择
-  - 🎯 全球直连
-- name: 🌍 国外媒体
-  type: select
-  proxies:
-  - 🚀 节点选择
-  - ♻️ 自动选择
-- name: Ⓜ️ 微软服务
-  type: select
-  proxies:
-  - 🚀 节点选择
-  - 🎯 全球直连
-- name: 🍎 苹果服务
-  type: select
-  proxies:
-  - 🚀 节点选择
-  - 🎯 全球直连
-- name: 🎯 全球直连
-  type: select
-  proxies:
+  - PROXY
+  - Auto
   - DIRECT
-- name: 🛑 广告拦截
+- name: Global
   type: select
   proxies:
-  - REJECT
   - DIRECT
 rules:
-- DOMAIN-KEYWORD,adservice,🛑 广告拦截
-- DOMAIN-SUFFIX,ads.com,🛑 广告拦截
-- DOMAIN-SUFFIX,cn,🎯 全球直连
-- DOMAIN-SUFFIX,baidu.com,🎯 全球直连
-- DOMAIN-SUFFIX,qq.com,🎯 全球直连
-- DOMAIN-SUFFIX,taobao.com,🎯 全球直连
-- DOMAIN-SUFFIX,alipay.com,🎯 全球直连
-- DOMAIN-SUFFIX,jd.com,🎯 全球直连
-- DOMAIN-SUFFIX,bilibili.com,📺 哔哩哔哩
-- DOMAIN-SUFFIX,bilibili.tv,📺 哔哩哔哩
-- DOMAIN-SUFFIX,biliapi.com,📺 哔哩哔哩
-- DOMAIN-SUFFIX,biliapi.net,📺 哔哩哔哩
-- DOMAIN-SUFFIX,bilivideo.com,📺 哔哩哔哩
-- DOMAIN-SUFFIX,netflix.com,🌍 国外媒体
-- DOMAIN-SUFFIX,disneyplus.com,🌍 国外媒体
-- DOMAIN-SUFFIX,hbo.com,🌍 国外媒体
-- DOMAIN-SUFFIX,youtube.com,🌍 国外媒体
-- DOMAIN-SUFFIX,twitter.com,🌍 国外媒体
-- DOMAIN-SUFFIX,microsoft.com,Ⓜ️ 微软服务
-- DOMAIN-SUFFIX,windows.com,Ⓜ️ 微软服务
-- DOMAIN-SUFFIX,office.com,Ⓜ️ 微软服务
-- DOMAIN-SUFFIX,apple.com,🍎 苹果服务
-- DOMAIN-SUFFIX,icloud.com,🍎 苹果服务
-- GEOIP,CN,🎯 全球直连
-- MATCH,🚀 节点选择
+- DOMAIN-SUFFIX,ads.com,REJECT
+- DOMAIN-KEYWORD,adsite,REJECT
+- DOMAIN-SUFFIX,cn,DIRECT
+- DOMAIN-SUFFIX,baidu.com,DIRECT
+- DOMAIN-SUFFIX,qq.com,DIRECT
+- DOMAIN-SUFFIX,taobao.com,DIRECT
+- DOMAIN-SUFFIX,jd.com,DIRECT
+- DOMAIN-SUFFIX,weibo.com,DIRECT
+- DOMAIN-SUFFIX,netflix.com,Streaming
+- DOMAIN-SUFFIX,disneyplus.com,Streaming
+- DOMAIN-SUFFIX,youtube.com,Streaming
+- DOMAIN-SUFFIX,bilibili.com,DIRECT
+- DOMAIN-SUFFIX,google.com,PROXY
+- DOMAIN-SUFFIX,github.com,PROXY
+- DOMAIN-SUFFIX,twitter.com,PROXY
+- GEOIP,CN,DIRECT
+- MATCH,PROXY
