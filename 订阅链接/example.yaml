@@ -2,7 +2,7 @@
 # Clash 配置文件
 # ========================================
 # 
-# 更新时间（东八区北京时间）: 2026-01-17 00:01:51
+# 更新时间（东八区北京时间）: 2026-01-17 00:10:53
 # 输入源文件: example
 # 订阅链接获取情况: 4/6
 # 
@@ -24,14 +24,14 @@
 port: 7890
 socks-port: 7891
 mixed-port: 7893
-allow-lan: false
-mode: rule
+allow-lan: true
+mode: Rule
 log-level: info
-external-controller: 127.0.0.1:9090
+external-controller: 0.0.0.0:9090
 dns:
   enable: true
   ipv6: false
-  listen: 127.0.0.1:53
+  listen: 0.0.0.0:53
   default-nameserver:
   - 223.5.5.5
   - 119.29.29.29
@@ -41,35 +41,14 @@ dns:
   - https://doh.pub/dns-query
   - https://dns.alidns.com/dns-query
   fallback:
-  - https://dns.cloudflare.com/dns-query
   - https://doh.dns.sb/dns-query
+  - https://dns.cloudflare.com/dns-query
   fallback-filter:
     geoip: true
     ipcidr:
     - 240.0.0.0/4
 proxies:
-- name: 剩余流量：87.82 GB
-  type: hysteria2
-  server: hkzl1.vyunyunnode.top
-  port: 49000
-  password: /e97be888-f728-4ef7-baab-7bcd504564ce
-  sni: hkzl1.vyunyunnode.top
-  skip-cert-verify: true
-- name: 距离下次重置剩余：27 天
-  type: hysteria2
-  server: hkzl1.vyunyunnode.top
-  port: 49000
-  password: /e97be888-f728-4ef7-baab-7bcd504564ce
-  sni: hkzl1.vyunyunnode.top
-  skip-cert-verify: true
-- name: 套餐到期：2028-02-12
-  type: hysteria2
-  server: hkzl1.vyunyunnode.top
-  port: 49000
-  password: /e97be888-f728-4ef7-baab-7bcd504564ce
-  sni: hkzl1.vyunyunnode.top
-  skip-cert-verify: true
-- name: 香港1直连
+- name: 剩余流量：87.79 GB
   type: hysteria2
   server: hkzl1.vyunyunnode.top
   port: 49000
@@ -453,14 +432,6 @@ proxies:
   sni: 0.0.0.0
   skip-cert-verify: true
   udp: true
-- name: 请立即到官网下载新客户端！
-  type: trojan
-  server: 0.0.0.0
-  port: 443
-  password: 4e8e9d60-9198-432a-8bd6-b6770816fe99
-  sni: 0.0.0.0
-  skip-cert-verify: true
-  udp: true
 - name: 您正在使用的是最新客户端
   type: vless
   server: 0.0.0.0
@@ -734,20 +705,6 @@ proxies:
   skip-cert-verify: true
   udp: true
 - name: 剩余流量：98.69 GB
-  type: ss
-  server: 120.77.38.81
-  port: 11235
-  cipher: aes-256-gcm
-  password: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-- name: 套餐到期：长期有效
-  type: ss
-  server: 120.77.38.81
-  port: 11235
-  cipher: aes-256-gcm
-  password: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
-  udp: true
-- name: 🇺🇸US@Bosa佬赞助
   type: ss
   server: 120.77.38.81
   port: 11235
@@ -1150,6 +1107,227 @@ proxies:
   tls: true
   skip-cert-verify: false
   servername: learn.cpplang.ggff.net
+- name: 🇷🇺RU-slw佬赞助
+  type: vless
+  server: cf-ip-new.root.sx
+  port: 8443
+  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
+  udp: true
+  servername: www.speedtest.net
+- name: 🇺🇸US5x家宽-bai佬赞助
+  type: vless
+  server: 154.26.176.67
+  port: 10734
+  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
+  udp: true
+  tls: true
+  skip-cert-verify: false
+  servername: learn.cpplang.ggff.net
+- name: 🇺🇸US5x家宽-wz佬赞助
+  type: vless
+  server: 38.207.163.72
+  port: 56328
+  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
+  udp: true
+  tls: true
+  skip-cert-verify: false
+  servername: learn.cpplang.ggff.net
+- name: 🇺🇸5x家宽-2@Bosa佬赞助
+  type: vless
+  server: 174.136.204.191
+  port: 55784
+  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
+  udp: true
+  servername: tesla.com
+- name: 🇺🇸5x家宽-2@hkxiaoyao佬赞助
+  type: vless
+  server: 38.165.45.91
+  port: 57262
+  uuid: e49b9cb3-9cc3-49c2-b3ab-abdde722c27b
+  udp: true
+  servername: tesla.com
+- name: 剩余流量：53.97 GB
+  type: trojan
+  server: sssg01.go52pokemon.com
+  port: 55016
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇭🇰【亚洲】香港01丨AWS【2x】
+  type: ss
+  server: hkbgp.xsaym.com
+  port: 54257
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇭🇰【亚洲】香港01丨V6【1x】
+  type: trojan
+  server: v601.xsaym.com
+  port: 54357
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇭🇰【亚洲】香港02丨V6【1x】
+  type: trojan
+  server: v602.xsaym.com
+  port: 54357
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇸🇬【亚洲】新加坡01丨专线【3x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 55016
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇸🇬【亚洲】新加坡03丨专线【3x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 55015
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇸🇬【亚洲】新加坡05丨AWS【2x】
+  type: ss
+  server: hkbgp.xsaym.com
+  port: 54258
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇸🇬【亚洲】新加坡07丨V6【1x】
+  type: ss
+  server: v601.xsaym.com
+  port: 54258
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇸🇬【亚洲】新加坡08丨V6【1x】
+  type: ss
+  server: v602.xsaym.com
+  port: 54258
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇸🇬【亚洲】新加坡09丨IPLC【10x】
+  type: trojan
+  server: ptxl02.xsaym.com
+  port: 55017
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇯🇵【亚洲】日本01丨专线【3x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 54225
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇯🇵【亚洲】日本03丨专线【3x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 54032
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇯🇵【亚洲】日本05丨AWS【2x】
+  type: ss
+  server: hkbgp.xsaym.com
+  port: 54261
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇯🇵【亚洲】日本07丨V6【1x】
+  type: ss
+  server: v601.xsaym.com
+  port: 54261
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇯🇵【亚洲】日本09丨IPLC游戏专线【10x】
+  type: trojan
+  server: ptxl02.xsaym.com
+  port: 54029
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇹🇼【亚洲】台湾家宽01丨AWS【3x】
+  type: ss
+  server: hkbgp.xsaym.com
+  port: 54259
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇰🇷【亚洲】韩国家宽01丨专线【6x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 59110
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇰🇷【亚洲】韩国家宽02丨专线【6x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 59099
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇰🇷【亚洲】韩国家宽01丨AWS【3x】
+  type: ss
+  server: hkbgp.xsaym.com
+  port: 54265
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇺🇸【北美洲】美国01丨专线【3x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 56115
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇺🇸【北美洲】美国03丨专线【3x】
+  type: trojan
+  server: ptxl01.xsaym.com
+  port: 56017
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
+- name: 🇺🇸【北美洲】美国01丨AWS【2x】
+  type: ss
+  server: hkbgp.xsaym.com
+  port: 54263
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇺🇸【北美洲】美国03丨V6【1x】
+  type: ss
+  server: v601.xsaym.com
+  port: 54273
+  cipher: 2022-blake3-aes-128-gcm
+  password: MjA0YzgwZjBlM2ZkNmRlNA==:ZDIwYzFlZWItYWI3Mi00ZA==
+  udp: true
+- name: 🇺🇸【北美洲】美国05丨IPLC【10x】
+  type: trojan
+  server: ptxl02.xsaym.com
+  port: 56019
+  password: d20c1eeb-ab72-4d9d-8a52-63aa1b2ec188
+  sni: www.volcengine.com
+  skip-cert-verify: true
+  udp: true
 proxy-groups:
 - name: 节点选择
   type: select
@@ -1160,12 +1338,8 @@ proxy-groups:
   type: url-test
   url: http://www.gstatic.com/generate_204
   interval: 300
-  tolerance: 50
   proxies:
-  - 剩余流量：87.82 GB
-  - 距离下次重置剩余：27 天
-  - 套餐到期：2028-02-12
-  - 香港1直连
+  - 剩余流量：87.79 GB
   - 香港2直连
   - 香港3直连
   - 台湾家宽直连
@@ -1220,7 +1394,6 @@ proxy-groups:
   - 🇬🇧英国01
   - 🇬🇧英国02
   - 一元机场.asia
-  - 请立即到官网下载新客户端！
   - 您正在使用的是最新客户端
   - 🇭🇰香港 01 | 高级专线
   - 🇭🇰香港 02 | 高级专线
@@ -1254,17 +1427,127 @@ proxy-groups:
   - 🇺🇸美国 03 | 专线
   - 🇺🇸美国 04 | 专线
   - 剩余流量：98.69 GB
-  - 套餐到期：长期有效
-  - 🇺🇸US@Bosa佬赞助
   - 🇭🇰HK@wuan佬赞助
   - 🇭🇰HK@Eliot.H佬赞助
   - 🇭🇰HK@CBH佬赞助
   - 🇭🇰HK@Bosa佬赞助
   - 🇭🇰HK@xingcxx佬赞助
   - 🇭🇰HK@linxi_2650佬赞助
+  - 🇭🇰HK@linlee佬赞助
+  - 🇯🇵JP-1@Yoga佬赞助
+  - 🇯🇵JP-2@Yoga佬赞助
+  - 🇯🇵JP@Binbim佬赞助
+  - 🇯🇵JP@Cyclops佬赞助
+  - 🇯🇵JP@dingz佬赞助
+  - 🇯🇵JP@wjzhu佬赞助
+  - 🇸🇬SG@shiyang佬赞助
+  - 🇸🇬SG@cai6佬赞助
+  - 🇸🇬SG@xcdeveloper佬赞助
+  - 🇸🇬SG@zea佬赞助
+  - 🇸🇬SG@wwang佬赞助
+  - 🇸🇬SG@yuemanly佬赞助
+  - 🇸🇬SG-yltf佬赞助
+  - 🇺🇸US-1@LRWF佬赞助
+  - 🇺🇸US-2@LRWF佬赞助
+  - 🇺🇸US-3@LRWF佬赞助
+  - 🇺🇸US@Tokinx佬赞助
+  - 🇺🇸US-2@qingfenghao佬赞助
+  - 🇺🇸US@yzfh佬赞助
+  - 🇺🇸US@csgwu佬赞助
+  - 🇺🇸US@hx3251佬赞助
+  - 🇺🇸US@goldenhawk佬赞助
+  - 🇺🇸US@Yoga佬赞助
+  - 🇺🇸US@houzai佬赞助
+  - 🇺🇸US@3rd佬赞助
+  - 🇺🇸US@Handsomedog佬赞助
+  - 🇺🇸US@Ling_Anthony佬赞助
+  - 🇺🇸US@kikii佬赞助
+  - 🇺🇸US@lyrnox佬赞助
+  - 🇺🇸US@TAOZHANG佬赞助
+  - 🇺🇸US@zwz211123佬赞助
+  - 🇺🇸US@wise_bird佬赞助
+  - 🇺🇸US@laoqiao佬赞助
+  - 🇺🇸US@hl128k佬赞助
+  - 🇺🇸US@Iguang9881佬赞助
+  - 🇺🇸US@123nhh佬赞助
+  - 🇺🇸US@dong佬赞助
+  - 🇨🇦CA@Tokinx佬赞助
+  - 🇨🇦CA@aaa3055佬赞助
+  - 🇮🇳IN@dingz佬赞助
+  - 🇳🇱NL@cai6佬赞助
+  - 🇹🇷TR@Rainbear佬赞助
+  - 🇬🇧GB@Ksoyoung佬赞助
+  - 🇩🇪DE@laoqiao佬赞助
+  - 🇩🇪DE@hl128k佬赞助
+  - 🇦🇺AU@FF_Crazy佬赞助
+  - 🇲🇩MD@terence佬赞助
+  - 🇺🇸US-r佬赞助
+  - 🇺🇸US-se佬赞助
+  - 🇷🇺RU-slw佬赞助
+  - 🇺🇸US5x家宽-bai佬赞助
+  - 🇺🇸US5x家宽-wz佬赞助
+  - 🇺🇸5x家宽-2@Bosa佬赞助
+  - 🇺🇸5x家宽-2@hkxiaoyao佬赞助
+  - 剩余流量：53.97 GB
+  - 🇭🇰【亚洲】香港01丨AWS【2x】
+  - 🇭🇰【亚洲】香港01丨V6【1x】
+  - 🇭🇰【亚洲】香港02丨V6【1x】
+  - 🇸🇬【亚洲】新加坡01丨专线【3x】
+  - 🇸🇬【亚洲】新加坡03丨专线【3x】
+  - 🇸🇬【亚洲】新加坡05丨AWS【2x】
+  - 🇸🇬【亚洲】新加坡07丨V6【1x】
+  - 🇸🇬【亚洲】新加坡08丨V6【1x】
+  - 🇸🇬【亚洲】新加坡09丨IPLC【10x】
+  - 🇯🇵【亚洲】日本01丨专线【3x】
+  - 🇯🇵【亚洲】日本03丨专线【3x】
+  - 🇯🇵【亚洲】日本05丨AWS【2x】
+  - 🇯🇵【亚洲】日本07丨V6【1x】
+  - 🇯🇵【亚洲】日本09丨IPLC游戏专线【10x】
+  - 🇹🇼【亚洲】台湾家宽01丨AWS【3x】
+  - 🇰🇷【亚洲】韩国家宽01丨专线【6x】
+  - 🇰🇷【亚洲】韩国家宽02丨专线【6x】
+  - 🇰🇷【亚洲】韩国家宽01丨AWS【3x】
+  - 🇺🇸【北美洲】美国01丨专线【3x】
+  - 🇺🇸【北美洲】美国03丨专线【3x】
+  - 🇺🇸【北美洲】美国01丨AWS【2x】
+  - 🇺🇸【北美洲】美国03丨V6【1x】
+  - 🇺🇸【北美洲】美国05丨IPLC【10x】
 rules:
-- ;ruleset=🎯 全球直连,[]GEOIP,LAN
+- ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/LocalAreaNetwork.list
+- ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/UnBan.list
+- ruleset=🛑 广告拦截,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanAD.list
+- ruleset=🍃 应用净化,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/BanProgramAD.list
+- ruleset=📢 谷歌FCM,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/GoogleFCM.list
+- ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/GoogleCN.list
+- ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/SteamCN.list
+- ruleset=Ⓜ️ 微软Bing,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Bing.list
+- ruleset=Ⓜ️ 微软云盘,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/OneDrive.list
+- ruleset=Ⓜ️ 微软服务,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Microsoft.list
+- ruleset=🍎 苹果服务,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Apple.list
+- ruleset=📲 电报消息,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Telegram.list
+- ruleset=💬 Ai平台,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/AI.list
+- ruleset=💬 Ai平台,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/OpenAi.list
+- ruleset=🎶 网易音乐,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/NetEaseMusic.list
+- ruleset=🎮 游戏平台,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Epic.list
+- ruleset=🎮 游戏平台,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Origin.list
+- ruleset=🎮 游戏平台,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Sony.list
+- ruleset=🎮 游戏平台,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Steam.list
+- ruleset=🎮 游戏平台,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Nintendo.list
+- ruleset=📹 油管视频,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/YouTube.list
+- ruleset=🎥 奈飞视频,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Netflix.list
+- ruleset=📺 巴哈姆特,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Bahamut.list
+- ruleset=📺 哔哩哔哩,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/BilibiliHMT.list
+- ruleset=📺 哔哩哔哩,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Ruleset/Bilibili.list
+- ruleset=🌏 国内媒体,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaMedia.list
+- ruleset=🌍 国外媒体,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ProxyMedia.list
+- ruleset=🚀 节点选择,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ProxyGFWlist.list
+- ;ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaIp.list
+- ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaDomain.list
+- ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/ChinaCompanyIp.list
+- ruleset=🎯 全球直连,https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/master/Clash/Download.list
+- ;ruleset=🎯 全球直连,[]GEOIP,DIRECT
 - ruleset=🎯 全球直连,[]GEOIP,CN
+- ruleset=🐟 漏网之鱼,[]FINAL
 - custom_proxy_group=♻️ 自动选择`url-test`.*`http://www.gstatic.com/generate_204`300,,50
 - custom_proxy_group=🇭🇰 香港节点`url-test`(港|HK|hk|Hong Kong|HongKong|hongkong)`http://www.gstatic.com/generate_204`300,,50
 - custom_proxy_group=🇯🇵 日本节点`url-test`(日本|川日|东京|大阪|泉日|埼玉|沪日|深日|JP|Japan)`http://www.gstatic.com/generate_204`300,,50
