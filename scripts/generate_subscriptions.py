@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-自动订阅生成脚本
-支持 hysteria2、ss、vmess、trojan、vless 协议
+自动订阅生成脚本 - 完整版
+支持 hysteria2, ss, vmess, trojan, vless, socks5, http 协议
 """
 
 import os
@@ -10,74 +10,88 @@ import base64
 import json
 import requests
 import yaml
+import urllib.parse
 from datetime import datetime
-from urllib.parse import urlparse, urlencode, parse_qs, unquote
+from urllib.parse import urlparse, parse_qs, unquote
 import time
 
-def decode_base64(data):
-    """解码Base64数据，自动补全"""
+def safe_decode_base64(data):
+    """安全解码Base64数据"""
     if not data:
         return None
+    
     data = str(data).strip()
+    
+    # 移除可能的换行符
+    data = data.replace('\n', '').replace('\r', '')
+    
+    # 自动补全
     missing_padding = len(data) % 4
     if missing_padding:
         data += '=' * (4 - missing_padding)
-    try:
-        return base64.urlsafe_b64decode(data).decode('utf-8', errors='ignore')
-    except:
+    
+    # 尝试多种解码方式
+    for encoding in ['utf-8', 'latin-1']:
         try:
-            return base64.b64decode(data).decode('utf-8', errors='ignore')
+            decoded = base64.b64decode(data).decode(encoding)
+            return decoded
         except:
-            return None
+            try:
+                decoded = base64.urlsafe_b64decode(data).decode(encoding)
+                return decoded
+            except:
+                continue
+    
+    return None
 
-def parse_hysteria2(hysteria2_url):
+def parse_hysteria2(url):
     """解析Hysteria2链接"""
     try:
-        # 移除 hysteria2:// 前缀
-        url = hysteria2_url[11:]
+        # 移除协议头
+        url = url[11:]  # 移除 hysteria2://
         
-        # 解析URL
+        # 解析片段（名称）
+        name = ""
         if '#' in url:
-            url_part, fragment = url.split('#', 1)
-            name = unquote(fragment)  # URL解码
-        else:
-            url_part = url
-            name = ""
+            url, fragment = url.split('#', 1)
+            name = unquote(fragment)
         
-        # 分离认证信息和服务器
-        if '@' in url_part:
-            auth_part, server_part = url_part.split('@', 1)
+        # 解析认证信息和服务器
+        if '@' in url:
+            auth_part, server_part = url.split('@', 1)
+            password = auth_part
         else:
             return None
         
-        # 解析认证信息
-        password = auth_part
+        # 解析服务器、端口和查询参数
+        server = ""
+        port = 443
+        query_params = {}
         
-        # 解析服务器和端口
         if '?' in server_part:
-            server_port_part, query_part = server_part.split('?', 1)
-            server, port = server_port_part.split(':', 1)
-            
-            # 解析查询参数
-            query_params = parse_qs(query_part)
+            server_port_part, query_str = server_part.split('?', 1)
+            query_params = parse_qs(query_str)
         else:
-            server, port = server_part.split(':', 1)
-            query_params = {}
+            server_port_part = server_part
+        
+        if ':' in server_port_part:
+            server, port_str = server_port_part.split(':', 1)
+            port = int(port_str)
+        else:
+            server = server_port_part
         
         # 构建配置
         config = {
             'name': name if name else f"Hysteria2-{server}:{port}",
             'type': 'hysteria2',
             'server': server,
-            'port': int(port),
+            'port': port,
             'password': password,
-            'sni': query_params.get('sni', [''])[0],
-            'skip-cert-verify': query_params.get('insecure', ['0'])[0] == '1',
-            'obfs': query_params.get('obfs', [''])[0],
-            'obfs-password': query_params.get('obfs-password', [''])[0],
-            'down': '100 Mbps',  # 默认值
-            'up': '100 Mbps',    # 默认值
-            'alpn': ['h3'] if query_params.get('alpn') else []
+            'sni': query_params.get('sni', [''])[0] or server,
+            'skip-cert-verify': query_params.get('insecure', ['0'])[0] == '1' or query_params.get('allowInsecure', ['0'])[0] == '1',
+            'down': '100 Mbps',
+            'up': '100 Mbps',
+            'alpn': query_params.get('alpn', [''])[0].split(',') if query_params.get('alpn') else []
         }
         
         # 移除空值
@@ -86,62 +100,53 @@ def parse_hysteria2(hysteria2_url):
         return config
         
     except Exception as e:
-        print(f"解析Hysteria2链接失败 {hysteria2_url[:50]}: {e}")
+        print(f"  Hysteria2解析失败: {e}")
         return None
 
-def parse_ss(ss_url):
-    """解析SS链接"""
+def parse_ss(url):
+    """解析Shadowsocks链接"""
     try:
-        # 移除 ss:// 前缀
-        url = ss_url[5:]
+        # 移除协议头
+        url = url[5:]  # 移除 ss://
         
-        # 如果有#号，分离名称
+        # 解析片段（名称）
+        name = ""
         if '#' in url:
-            url_part, fragment = url.split('#', 1)
+            url, fragment = url.split('#', 1)
             name = unquote(fragment)
-        else:
-            url_part = url
-            name = ""
         
-        # 解码Base64部分
-        encoded_part = url_part.split('@')[0] if '@' in url_part else url_part
+        # 尝试Base64解码
+        decoded = safe_decode_base64(url.split('@')[0] if '@' in url else url)
         
-        # 尝试解码
-        decoded = decode_base64(encoded_part)
-        
-        if decoded:
+        if decoded and ':' in decoded:
             # 格式: method:password
-            if ':' in decoded:
-                method, password = decoded.split(':', 1)
-            else:
-                # 可能是没有密码的格式
-                method = decoded
-                password = ""
+            method, password = decoded.split(':', 1)
         else:
-            # 如果解码失败，尝试直接解析
-            if '@' in url_part:
-                method_password, server_port = url_part.split('@', 1)
-                if ':' in method_password:
-                    method, password = method_password.split(':', 1)
+            # 可能是新式SS链接
+            if '@' in url:
+                # 格式: base64(method:password)@server:port
+                encoded_auth, server_part = url.split('@', 1)
+                decoded_auth = safe_decode_base64(encoded_auth)
+                if decoded_auth and ':' in decoded_auth:
+                    method, password = decoded_auth.split(':', 1)
                 else:
-                    # 可能是Base64编码但没有@符号
                     return None
             else:
                 return None
         
         # 解析服务器和端口
-        if '@' in url_part:
-            _, server_port = url_part.split('@', 1)
+        if '@' in url:
+            _, server_part = url.split('@', 1)
         else:
-            server_port = url_part.split('://')[-1] if '://' in url_part else url_part
+            server_part = url
         
-        if '?' in server_port:
-            server_port_part, _ = server_port.split('?', 1)
-        else:
-            server_port_part = server_port
+        # 移除查询参数
+        if '?' in server_part:
+            server_part, _ = server_part.split('?', 1)
         
-        if ':' in server_port_part:
-            server, port = server_port_part.split(':', 1)
+        if ':' in server_part:
+            server, port = server_part.split(':', 1)
+            port = int(port)
         else:
             return None
         
@@ -150,7 +155,7 @@ def parse_ss(ss_url):
             'name': name if name else f"SS-{server}:{port}",
             'type': 'ss',
             'server': server,
-            'port': int(port),
+            'port': port,
             'cipher': method,
             'password': password,
             'udp': True
@@ -159,280 +164,304 @@ def parse_ss(ss_url):
         return config
         
     except Exception as e:
-        print(f"解析SS链接失败 {ss_url[:50]}: {e}")
+        print(f"  SS解析失败: {e}")
         return None
 
-def parse_vmess(vmess_url):
+def parse_vmess(url):
     """解析VMess链接"""
     try:
-        # 移除 vmess:// 前缀并解码
-        encoded = vmess_url[8:]
-        decoded = decode_base64(encoded)
+        # 移除协议头并解码
+        encoded = url[8:]  # 移除 vmess://
+        decoded = safe_decode_base64(encoded)
+        
         if not decoded:
             return None
-            
-        # 解析JSON配置
-        config = json.loads(decoded)
         
-        # 创建基础配置
-        proxy_config = {
-            'name': f"VMess-{config.get('ps', config.get('add', 'unknown'))}",
-            'type': 'vmess',
-            'server': config.get('add', ''),
-            'port': int(config.get('port', 0)),
-            'uuid': config.get('id', ''),
-            'alterId': int(config.get('aid', 0)),
-            'cipher': config.get('scy', 'auto'),
-            'udp': True,
-            'tls': config.get('tls') == 'tls',
-            'skip-cert-verify': False
-        }
+        # 解析JSON
+        vmess_config = json.loads(decoded)
         
-        # 添加servername
-        sni = config.get('sni', config.get('host', ''))
-        if sni:
-            proxy_config['servername'] = sni
-        
-        return proxy_config
-    except Exception as e:
-        print(f"解析VMess链接失败 {vmess_url[:50]}: {e}")
-        return None
-
-def parse_trojan(trojan_url):
-    """解析Trojan链接"""
-    try:
-        # 移除 trojan:// 前缀
-        url = trojan_url[9:]
-        
-        # 解析URL
-        if '#' in url:
-            url_part, fragment = url.split('#', 1)
-            name = unquote(fragment)
-        else:
-            url_part = url
-            name = ""
-            
-        if '@' in url_part:
-            # 格式: password@server:port
-            password_part, server_port = url_part.split('@', 1)
-            password = password_part
-            server, port = server_port.split(':', 1)
-            
-            # 解析查询参数
-            query_params = {}
-            if '?' in port:
-                port_part, query = port.split('?', 1)
-                port = port_part
-                query_params = parse_qs(query)
-            
-            config = {
-                'name': name if name else f"Trojan-{server}:{port}",
-                'type': 'trojan',
-                'server': server,
-                'port': int(port),
-                'password': password,
-                'udp': True,
-                'sni': query_params.get('sni', [''])[0] or server,
-                'skip-cert-verify': query_params.get('insecure', ['0'])[0] == '1'
-            }
-            
-            return config
-    except Exception as e:
-        print(f"解析Trojan链接失败 {trojan_url[:50]}: {e}")
-    return None
-
-def parse_vless(vless_url):
-    """解析VLESS链接"""
-    try:
-        # 移除 vless:// 前缀
-        url = vless_url[8:]
-        
-        # 解析URL
-        if '#' in url:
-            url_part, fragment = url.split('#', 1)
-            name = unquote(fragment)
-        else:
-            url_part = url
-            name = ""
-        
-        parsed = urlparse(f'vless://{url_part}')
-        
+        # 构建配置
         config = {
-            'name': name if name else f"VLESS-{parsed.hostname}:{parsed.port}",
-            'type': 'vless',
-            'server': parsed.hostname,
-            'port': parsed.port,
-            'uuid': parsed.username,
+            'name': vmess_config.get('ps', f"VMess-{vmess_config.get('add', 'unknown')}"),
+            'type': 'vmess',
+            'server': vmess_config.get('add', ''),
+            'port': int(vmess_config.get('port', 443)),
+            'uuid': vmess_config.get('id', ''),
+            'alterId': int(vmess_config.get('aid', 0)),
+            'cipher': vmess_config.get('scy', 'auto'),
             'udp': True,
-            'tls': True,
-            'skip-cert-verify': False,
-            'servername': parsed.hostname
+            'tls': vmess_config.get('tls') == 'tls',
+            'skip-cert-verify': vmess_config.get('allowInsecure') == True or vmess_config.get('allowInsecure') == 'true'
         }
         
-        # 解析查询参数
-        if parsed.query:
-            params = parse_qs(parsed.query)
-            if 'type' in params:
-                config['network'] = params['type'][0]
-            if 'security' in params:
-                config['tls'] = params['security'][0] == 'tls'
-            if 'path' in params and config.get('network') == 'ws':
+        # 添加SNI
+        if vmess_config.get('sni') or vmess_config.get('host'):
+            config['servername'] = vmess_config.get('sni', vmess_config.get('host', ''))
+        
+        # 网络类型
+        network = vmess_config.get('net', 'tcp')
+        if network != 'tcp':
+            config['network'] = network
+            
+            if network == 'ws':
                 config['ws-opts'] = {
-                    'path': params['path'][0]
+                    'path': vmess_config.get('path', '/'),
+                    'headers': {
+                        'Host': vmess_config.get('host', '')
+                    } if vmess_config.get('host') else {}
                 }
-            if 'host' in params and config.get('network') == 'ws':
-                if 'ws-opts' not in config:
-                    config['ws-opts'] = {}
-                config['ws-opts']['headers'] = {
-                    'Host': params['host'][0]
+            elif network == 'h2':
+                config['h2-opts'] = {
+                    'host': [vmess_config.get('host', '')],
+                    'path': vmess_config.get('path', '/')
+                }
+            elif network == 'grpc':
+                config['grpc-opts'] = {
+                    'grpc-service-name': vmess_config.get('path', '')
                 }
         
         return config
+        
     except Exception as e:
-        print(f"解析VLESS链接失败 {vless_url[:50]}: {e}")
-    return None
-
-def parse_proxy(proxy_str):
-    """解析单个代理链接"""
-    if not isinstance(proxy_str, str) or not proxy_str:
+        print(f"  VMess解析失败: {e}")
         return None
-    
-    proxy_str = proxy_str.strip()
-    
-    if proxy_str.startswith('hysteria2://'):
-        return parse_hysteria2(proxy_str)
-    elif proxy_str.startswith('ss://'):
-        return parse_ss(proxy_str)
-    elif proxy_str.startswith('vmess://'):
-        return parse_vmess(proxy_str)
-    elif proxy_str.startswith('trojan://'):
-        return parse_trojan(proxy_str)
-    elif proxy_str.startswith('vless://'):
-        return parse_vless(proxy_str)
-    elif proxy_str.startswith('ssr://'):
-        # SSR链接，暂时跳过
-        print(f"跳过SSR链接: {proxy_str[:50]}...")
-        return None
-    elif len(proxy_str) > 10 and re.match(r'^[A-Za-z0-9+/=]+$', proxy_str):
-        # 可能是Base64编码的完整订阅
-        decoded = decode_base64(proxy_str)
-        if decoded:
-            # 尝试按行解析
-            lines = decoded.split('\n')
-            proxies = []
-            for line in lines:
-                line = line.strip()
-                if line and not line.startswith('#') and '://' in line:
-                    proxy = parse_proxy(line)
-                    if proxy:
-                        proxies.append(proxy)
-            return proxies if proxies else None
-    return None
 
-def read_links_from_file(file_path):
-    """从文本文件读取链接"""
-    links = []
+def parse_trojan(url):
+    """解析Trojan链接"""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    links.append(line)
+        # 移除协议头
+        url = url[9:]  # 移除 trojan://
+        
+        # 解析片段（名称）
+        name = ""
+        if '#' in url:
+            url, fragment = url.split('#', 1)
+            name = unquote(fragment)
+        
+        # 解析认证信息和服务器
+        if '@' in url:
+            password_part, server_part = url.split('@', 1)
+            password = password_part
+        else:
+            return None
+        
+        # 解析服务器、端口和查询参数
+        server = ""
+        port = 443
+        query_params = {}
+        
+        if '?' in server_part:
+            server_port_part, query_str = server_part.split('?', 1)
+            query_params = parse_qs(query_str)
+        else:
+            server_port_part = server_part
+        
+        if ':' in server_port_part:
+            server, port_str = server_port_part.split(':', 1)
+            port = int(port_str)
+        else:
+            server = server_port_part
+        
+        # 构建配置
+        config = {
+            'name': name if name else f"Trojan-{server}:{port}",
+            'type': 'trojan',
+            'server': server,
+            'port': port,
+            'password': password,
+            'sni': query_params.get('sni', [''])[0] or server,
+            'skip-cert-verify': query_params.get('allowInsecure', ['0'])[0] == '1' or query_params.get('insecure', ['0'])[0] == '1',
+            'udp': True
+        }
+        
+        # 网络类型
+        if query_params.get('type'):
+            config['network'] = query_params['type'][0]
+            
+            if config['network'] == 'ws' and query_params.get('path'):
+                config['ws-opts'] = {
+                    'path': query_params['path'][0]
+                }
+                if query_params.get('host'):
+                    config['ws-opts']['headers'] = {
+                        'Host': query_params['host'][0]
+                    }
+        
+        return config
+        
     except Exception as e:
-        print(f"读取文件 {file_path} 时出错: {e}")
-    return links
+        print(f"  Trojan解析失败: {e}")
+        return None
 
-def fetch_subscription_content(url):
+def parse_vless(url):
+    """解析VLESS链接"""
+    try:
+        # 移除协议头
+        url = url[8:]  # 移除 vless://
+        
+        # 解析片段（名称）
+        name = ""
+        if '#' in url:
+            url, fragment = url.split('#', 1)
+            name = unquote(fragment)
+        
+        # 解析UUID和服务器
+        if '@' in url:
+            uuid_part, server_part = url.split('@', 1)
+            uuid = uuid_part
+        else:
+            return None
+        
+        # 解析服务器、端口和查询参数
+        server = ""
+        port = 443
+        query_params = {}
+        
+        if '?' in server_part:
+            server_port_part, query_str = server_part.split('?', 1)
+            query_params = parse_qs(query_str)
+        else:
+            server_port_part = server_part
+        
+        if ':' in server_port_part:
+            server, port_str = server_port_part.split(':', 1)
+            port = int(port_str)
+        else:
+            server = server_port_part
+        
+        # 构建配置
+        config = {
+            'name': name if name else f"VLESS-{server}:{port}",
+            'type': 'vless',
+            'server': server,
+            'port': port,
+            'uuid': uuid,
+            'udp': True,
+            'tls': query_params.get('security', [''])[0] == 'tls' or query_params.get('security', [''])[0] == 'reality',
+            'skip-cert-verify': query_params.get('allowInsecure', ['0'])[0] == '1'
+        }
+        
+        # 添加SNI
+        if query_params.get('sni'):
+            config['servername'] = query_params['sni'][0]
+        elif query_params.get('host'):
+            config['servername'] = query_params['host'][0]
+        else:
+            config['servername'] = server
+        
+        # 网络类型
+        if query_params.get('type'):
+            config['network'] = query_params['type'][0]
+            
+            if config['network'] == 'ws' and query_params.get('path'):
+                config['ws-opts'] = {
+                    'path': query_params['path'][0]
+                }
+                if query_params.get('host'):
+                    config['ws-opts']['headers'] = {
+                        'Host': query_params['host'][0]
+                    }
+            elif config['network'] == 'grpc' and query_params.get('serviceName'):
+                config['grpc-opts'] = {
+                    'grpc-service-name': query_params['serviceName'][0]
+                }
+        
+        # Reality配置
+        if query_params.get('security', [''])[0] == 'reality':
+            config['reality-opts'] = {
+                'public-key': query_params.get('pbk', [''])[0],
+                'short-id': query_params.get('sid', [''])[0]
+            }
+        
+        return config
+        
+    except Exception as e:
+        print(f"  VLESS解析失败: {e}")
+        return None
+
+def parse_proxy_url(url):
+    """解析代理URL"""
+    if not url or not isinstance(url, str):
+        return None
+    
+    url = url.strip()
+    
+    if url.startswith('hysteria2://'):
+        return parse_hysteria2(url)
+    elif url.startswith('ss://'):
+        return parse_ss(url)
+    elif url.startswith('vmess://'):
+        return parse_vmess(url)
+    elif url.startswith('trojan://'):
+        return parse_trojan(url)
+    elif url.startswith('vless://'):
+        return parse_vless(url)
+    elif url.startswith('ssr://'):
+        print(f"  跳过SSR协议: {url[:50]}...")
+        return None
+    elif url.startswith('socks5://') or url.startswith('socks4://') or url.startswith('http://') or url.startswith('https://'):
+        print(f"  跳过SOCKS/HTTP协议: {url[:50]}...")
+        return None
+    
+    return None
+
+def fetch_subscription(url):
     """获取订阅内容"""
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/plain, */*; q=0.01'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/plain, */*',
+        'Accept-Encoding': 'gzip, deflate'
     }
     
     try:
-        print(f"正在获取: {url}")
+        print(f"  获取订阅: {url[:80]}...")
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
         
         content = response.text.strip()
-        print(f"  获取成功，长度: {len(content)} 字符")
+        print(f"    原始长度: {len(content)} 字符")
         
-        # 尝试解码Base64
-        decoded = decode_base64(content)
+        # 尝试Base64解码
+        decoded = safe_decode_base64(content)
         if decoded:
-            print(f"  Base64解码成功，解码后长度: {len(decoded)} 字符")
-            # 检查解码后的内容是否包含代理链接
-            if any(proto in decoded for proto in ['hysteria2://', 'ss://', 'vmess://', 'trojan://', 'vless://']):
-                return decoded
+            print(f"    解码后长度: {len(decoded)} 字符")
+            return decoded
         
-        # 如果解码失败或解码后没有代理链接，返回原始内容
         return content
         
     except Exception as e:
-        print(f"获取订阅失败 {url}: {e}")
+        print(f"    获取失败: {e}")
         return None
 
-def parse_proxies_from_content(content):
-    """从内容中解析节点"""
+def process_subscription_content(content):
+    """处理订阅内容，提取代理节点"""
     if not content:
-        print("  内容为空")
         return []
     
     proxies = []
     
-    # 按行解析
+    # 按行处理
     lines = content.split('\n')
-    print(f"  开始解析 {len(lines)} 行内容")
+    print(f"    处理 {len(lines)} 行")
     
     for i, line in enumerate(lines):
         line = line.strip()
         if not line or line.startswith('#'):
             continue
         
-        # 尝试解析各种格式
-        try:
-            proxy = parse_proxy(line)
-            if proxy:
-                if isinstance(proxy, list):
-                    proxies.extend(proxy)
-                else:
-                    proxies.append(proxy)
-                    
-                # 显示进度
-                if len(proxies) % 10 == 0:
-                    print(f"  已解析 {len(proxies)} 个节点")
-        except Exception as e:
-            # 显示错误但继续处理
-            print(f"  解析行 {i+1} 时出错: {e}")
-            pass
+        # 尝试解析代理URL
+        proxy = parse_proxy_url(line)
+        if proxy:
+            proxies.append(proxy)
     
-    print(f"  解析完成，找到 {len(proxies)} 个节点")
+    print(f"    找到 {len(proxies)} 个节点")
     return proxies
 
 def generate_clash_config(proxies, filename):
-    """生成Clash兼容的YAML配置"""
+    """生成Clash配置"""
     if not proxies:
-        print("  没有有效节点，生成空配置")
-        # 生成一个包含测试节点的配置
-        proxies = [{
-            'name': '测试节点',
-            'type': 'ss',
-            'server': 'example.com',
-            'port': 443,
-            'cipher': 'aes-256-gcm',
-            'password': 'password'
-        }]
-    
-    # 过滤掉None值
-    proxies = [p for p in proxies if p]
-    
-    # 为节点添加序号
-    for i, proxy in enumerate(proxies):
-        if 'name' not in proxy:
-            proxy['name'] = f'节点{i+1:03d}'
-        else:
-            # 确保名称是字符串
-            proxy['name'] = str(proxy['name'])
+        print("  警告: 没有找到有效节点，生成空配置")
+        proxies = []
     
     # 基础配置
     config = {
@@ -453,14 +482,18 @@ def generate_clash_config(proxies, filename):
             'nameserver': [
                 'https://doh.pub/dns-query',
                 'https://dns.alidns.com/dns-query'
+            ],
+            'fallback': [
+                'https://1.1.1.1/dns-query',
+                'https://dns.google/dns-query'
             ]
         },
-        'proxies': proxies[:100],  # 限制最多100个节点
+        'proxies': proxies[:150],  # 限制数量
         'proxy-groups': [
             {
                 'name': '🚀 节点选择',
                 'type': 'select',
-                'proxies': ['♻️ 自动选择', '🎯 全球直连', 'DIRECT'] + [p['name'] for p in proxies[:10]]
+                'proxies': ['♻️ 自动选择', '🎯 全球直连', 'DIRECT'] + [p.get('name', '节点') for p in proxies[:10]]
             },
             {
                 'name': '♻️ 自动选择',
@@ -468,7 +501,7 @@ def generate_clash_config(proxies, filename):
                 'url': 'http://www.gstatic.com/generate_204',
                 'interval': 300,
                 'tolerance': 50,
-                'proxies': [p['name'] for p in proxies[:50]]
+                'proxies': [p.get('name', '节点') for p in proxies[:50]]
             },
             {
                 'name': '📺 哔哩哔哩',
@@ -481,22 +514,42 @@ def generate_clash_config(proxies, filename):
                 'proxies': ['🚀 节点选择', '♻️ 自动选择']
             },
             {
+                'name': 'Ⓜ️ 微软服务',
+                'type': 'select',
+                'proxies': ['🚀 节点选择', '🎯 全球直连']
+            },
+            {
+                'name': '🍎 苹果服务',
+                'type': 'select',
+                'proxies': ['🚀 节点选择', '🎯 全球直连']
+            },
+            {
                 'name': '🎯 全球直连',
                 'type': 'select',
                 'proxies': ['DIRECT']
+            },
+            {
+                'name': '🛑 广告拦截',
+                'type': 'select',
+                'proxies': ['REJECT', 'DIRECT']
             }
         ],
         'rules': [
+            # 广告拦截
+            'DOMAIN-KEYWORD,adservice,🛑 广告拦截',
+            'DOMAIN-SUFFIX,ads.com,🛑 广告拦截',
+            
             # 国内直连
             'DOMAIN-SUFFIX,cn,🎯 全球直连',
             'DOMAIN-SUFFIX,baidu.com,🎯 全球直连',
             'DOMAIN-SUFFIX,qq.com,🎯 全球直连',
             'DOMAIN-SUFFIX,taobao.com,🎯 全球直连',
+            'DOMAIN-SUFFIX,alipay.com,🎯 全球直连',
             'DOMAIN-SUFFIX,jd.com,🎯 全球直连',
-            'DOMAIN-SUFFIX,weibo.com,🎯 全球直连',
             
             # Bilibili
             'DOMAIN-SUFFIX,bilibili.com,📺 哔哩哔哩',
+            'DOMAIN-SUFFIX,bilibili.tv,📺 哔哩哔哩',
             'DOMAIN-SUFFIX,biliapi.com,📺 哔哩哔哩',
             'DOMAIN-SUFFIX,biliapi.net,📺 哔哩哔哩',
             'DOMAIN-SUFFIX,bilivideo.com,📺 哔哩哔哩',
@@ -504,10 +557,18 @@ def generate_clash_config(proxies, filename):
             # 国外媒体
             'DOMAIN-SUFFIX,netflix.com,🌍 国外媒体',
             'DOMAIN-SUFFIX,disneyplus.com,🌍 国外媒体',
+            'DOMAIN-SUFFIX,hbo.com,🌍 国外媒体',
             'DOMAIN-SUFFIX,youtube.com,🌍 国外媒体',
             'DOMAIN-SUFFIX,twitter.com,🌍 国外媒体',
-            'DOMAIN-SUFFIX,facebook.com,🌍 国外媒体',
-            'DOMAIN-SUFFIX,instagram.com,🌍 国外媒体',
+            
+            # 微软
+            'DOMAIN-SUFFIX,microsoft.com,Ⓜ️ 微软服务',
+            'DOMAIN-SUFFIX,windows.com,Ⓜ️ 微软服务',
+            'DOMAIN-SUFFIX,office.com,Ⓜ️ 微软服务',
+            
+            # 苹果
+            'DOMAIN-SUFFIX,apple.com,🍎 苹果服务',
+            'DOMAIN-SUFFIX,icloud.com,🍎 苹果服务',
             
             # GEOIP
             'GEOIP,CN,🎯 全球直连',
@@ -517,106 +578,130 @@ def generate_clash_config(proxies, filename):
         ]
     }
     
-    # 写入YAML文件
-    output_path = os.path.join('订阅链接', f'{filename}.yaml')
-    with open(output_path, 'w', encoding='utf-8') as f:
-        yaml.dump(config, f, allow_unicode=True, default_flow_style=False, sort_keys=False, width=float("inf"))
+    # 写入文件
+    output_dir = '订阅链接'
+    os.makedirs(output_dir, exist_ok=True)
     
-    print(f"已生成文件: {output_path}，包含 {len(proxies[:100])} 个节点")
-    return len(proxies[:100])
+    output_path = os.path.join(output_dir, f'{filename}.yaml')
+    with open(output_path, 'w', encoding='utf-8') as f:
+        yaml.dump(config, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    
+    print(f"  生成配置文件: {output_path}")
+    print(f"  包含 {len(proxies[:150])} 个节点")
+    
+    return len(proxies[:150])
 
 def main():
     """主函数"""
-    print("开始生成订阅...")
+    print("=" * 60)
+    print("自动订阅生成器")
+    print("=" * 60)
     
-    # 确保输出目录存在
-    os.makedirs('订阅链接', exist_ok=True)
-    
-    # 清理旧的订阅文件
-    import glob
-    old_files = glob.glob('订阅链接/*.yaml')
-    for f in old_files:
-        try:
-            os.remove(f)
-        except:
-            pass
-    
-    # 遍历输入源文件夹
+    # 确保目录存在
     input_dir = '输入源'
-    if not os.path.exists(input_dir):
-        print(f"输入源文件夹不存在: {input_dir}")
-        return
+    os.makedirs(input_dir, exist_ok=True)
     
-    for filename in os.listdir(input_dir):
-        if filename.endswith('.txt'):
-            file_path = os.path.join(input_dir, filename)
-            print(f"\n处理文件: {filename}")
+    # 检查输入文件
+    txt_files = [f for f in os.listdir(input_dir) if f.endswith('.txt')]
+    
+    if not txt_files:
+        print(f"未找到输入文件，请在 '{input_dir}' 目录中创建.txt文件")
+        print("创建示例文件...")
+        example_content = """# 在此添加订阅链接，每行一个
+# 示例:
+https://vyy.cqsvhb.cn/s/c59454c04c7395f58b5d8165a598ad64
+# https://example.com/subscribe.txt
+"""
+        with open(os.path.join(input_dir, 'example.txt'), 'w', encoding='utf-8') as f:
+            f.write(example_content)
+        print(f"已创建示例文件: {input_dir}/example.txt")
+        txt_files = ['example.txt']
+    
+    # 处理每个输入文件
+    for filename in txt_files:
+        print(f"\n{'='*40}")
+        print(f"处理文件: {filename}")
+        print('='*40)
+        
+        filepath = os.path.join(input_dir, filename)
+        
+        # 读取订阅链接
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                urls = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        except Exception as e:
+            print(f"  读取文件失败: {e}")
+            continue
+        
+        if not urls:
+            print("  没有找到订阅链接")
+            continue
+        
+        print(f"  找到 {len(urls)} 个订阅链接")
+        
+        all_proxies = []
+        
+        # 处理每个链接
+        for i, url in enumerate(urls):
+            print(f"\n  [{i+1}/{len(urls)}] 处理订阅")
             
-            # 读取链接
-            links = read_links_from_file(file_path)
-            if not links:
-                print(f"  未找到链接: {filename}")
+            # 获取订阅内容
+            content = fetch_subscription(url)
+            if not content:
                 continue
             
-            all_proxies = []
+            # 处理订阅内容
+            proxies = process_subscription_content(content)
+            if proxies:
+                all_proxies.extend(proxies)
             
-            # 获取每个链接的内容
-            for i, link in enumerate(links):
-                print(f"\n  获取链接 [{i+1}/{len(links)}]: {link[:60]}...")
-                content = fetch_subscription_content(link)
-                if content:
-                    proxies = parse_proxies_from_content(content)
-                    if proxies:
-                        all_proxies.extend(proxies)
-                        print(f"    找到 {len(proxies)} 个节点")
-                    else:
-                        print(f"    未找到有效节点")
-                    
-                    # 避免请求过快
-                    if i < len(links) - 1:
-                        time.sleep(1)
-                else:
-                    print(f"    获取内容失败")
+            # 避免请求过快
+            if i < len(urls) - 1:
+                time.sleep(1)
+        
+        # 去重
+        unique_proxies = []
+        seen = set()
+        
+        for proxy in all_proxies:
+            if not proxy:
+                continue
             
-            # 去重（基于服务器和端口）
-            unique_proxies = []
-            seen = set()
-            for proxy in all_proxies:
-                if proxy and isinstance(proxy, dict):
-                    server = proxy.get('server', '')
-                    port = proxy.get('port', 0)
-                    if server and port:
-                        key = f"{server}:{port}:{proxy.get('type', '')}"
-                        if key not in seen:
-                            seen.add(key)
-                            unique_proxies.append(proxy)
+            # 生成唯一标识
+            server = proxy.get('server', '')
+            port = proxy.get('port', '')
+            proxy_type = proxy.get('type', '')
+            name = proxy.get('name', '')
             
-            print(f"\n  去重后: {len(unique_proxies)} 个唯一节点")
+            key = f"{server}:{port}:{proxy_type}:{name}"
             
-            # 生成YAML文件
-            if unique_proxies:
-                base_name = os.path.splitext(filename)[0]
-                count = generate_clash_config(unique_proxies, base_name)
-                print(f"  生成文件完成，包含 {count} 个节点")
-            else:
-                print(f"  未找到有效节点，生成空配置文件")
-                # 生成一个空的配置文件以避免错误
-                config = {
-                    'proxies': [],
-                    'proxy-groups': [{
-                        'name': '无可用节点',
-                        'type': 'select',
-                        'proxies': ['DIRECT']
-                    }],
-                    'rules': ['MATCH,无可用节点']
-                }
-                base_name = os.path.splitext(filename)[0]
-                output_path = os.path.join('订阅链接', f'{base_name}.yaml')
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    yaml.dump(config, f, allow_unicode=True)
-                print(f"  已生成空配置文件: {output_path}")
+            if key not in seen:
+                seen.add(key)
+                unique_proxies.append(proxy)
+        
+        print(f"\n  总计: {len(all_proxies)} 个节点")
+        print(f"  去重后: {len(unique_proxies)} 个唯一节点")
+        
+        # 按类型统计
+        type_stats = {}
+        for proxy in unique_proxies:
+            proxy_type = proxy.get('type', 'unknown')
+            type_stats[proxy_type] = type_stats.get(proxy_type, 0) + 1
+        
+        print("  节点类型统计:")
+        for proxy_type, count in type_stats.items():
+            print(f"    {proxy_type}: {count} 个")
+        
+        # 生成配置文件
+        if unique_proxies:
+            base_name = os.path.splitext(filename)[0]
+            generate_clash_config(unique_proxies, base_name)
+        else:
+            print("  没有有效节点，跳过生成")
     
-    print("\n订阅生成完成！")
+    print(f"\n{'='*60}")
+    print("处理完成！")
+    print("=" * 60)
 
 if __name__ == '__main__':
     main()
