@@ -17,8 +17,38 @@ dns:
   nameserver:
   - https://doh.pub/dns-query
   - https://dns.alidns.com/dns-query
+  fallback:
+  - https://1.1.1.1/dns-query
+  - https://dns.google/dns-query
 proxies:
-- name: 剩余流量：89.02 GB
+- name: 剩余流量：89.01 GB
+  type: hysteria2
+  server: hkzl1.vyunyunnode.top
+  port: 49000
+  password: /e97be888-f728-4ef7-baab-7bcd504564ce
+  sni: hkzl1.vyunyunnode.top
+  skip-cert-verify: true
+  down: 100 Mbps
+  up: 100 Mbps
+- name: 距离下次重置剩余：27 天
+  type: hysteria2
+  server: hkzl1.vyunyunnode.top
+  port: 49000
+  password: /e97be888-f728-4ef7-baab-7bcd504564ce
+  sni: hkzl1.vyunyunnode.top
+  skip-cert-verify: true
+  down: 100 Mbps
+  up: 100 Mbps
+- name: 套餐到期：2028-02-12
+  type: hysteria2
+  server: hkzl1.vyunyunnode.top
+  port: 49000
+  password: /e97be888-f728-4ef7-baab-7bcd504564ce
+  sni: hkzl1.vyunyunnode.top
+  skip-cert-verify: true
+  down: 100 Mbps
+  up: 100 Mbps
+- name: 香港1直连
   type: hysteria2
   server: hkzl1.vyunyunnode.top
   port: 49000
@@ -77,6 +107,7 @@ proxies:
   server: hgzl.vyunyunnode.top
   port: 44098
   password: /e97be888-f728-4ef7-baab-7bcd504564ce
+  sni: hgzl.vyunyunnode.top
   skip-cert-verify: false
   down: 100 Mbps
   up: 100 Mbps
@@ -420,23 +451,26 @@ proxy-groups:
   - ♻️ 自动选择
   - 🎯 全球直连
   - DIRECT
-  - 剩余流量：89.02 GB
+  - 剩余流量：89.01 GB
+  - 距离下次重置剩余：27 天
+  - 套餐到期：2028-02-12
+  - 香港1直连
   - 香港2直连
   - 香港3直连
   - 台湾家宽直连
   - 美国🇺🇸直连
   - 新加坡🇸🇬直连
   - 韩国直连
-  - 美国🇺🇸直连02
-  - 日本🇯🇵直连
-  - 🇭🇰香港01
 - name: ♻️ 自动选择
   type: url-test
   url: http://www.gstatic.com/generate_204
   interval: 300
   tolerance: 50
   proxies:
-  - 剩余流量：89.02 GB
+  - 剩余流量：89.01 GB
+  - 距离下次重置剩余：27 天
+  - 套餐到期：2028-02-12
+  - 香港1直连
   - 香港2直连
   - 香港3直连
   - 台湾家宽直连
@@ -483,9 +517,6 @@ proxy-groups:
   - 🇨🇳台湾03
   - 🇨🇳台湾04家宽
   - 🇨🇳台湾家宽05
-  - 🇺🇸美国01纽约GPT
-  - 🇺🇸美国02纽约GPT
-  - 🇺🇸美国03纽约GPT
 - name: 📺 哔哩哔哩
   type: select
   proxies:
@@ -497,26 +528,48 @@ proxy-groups:
   proxies:
   - 🚀 节点选择
   - ♻️ 自动选择
+- name: Ⓜ️ 微软服务
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - 🎯 全球直连
+- name: 🍎 苹果服务
+  type: select
+  proxies:
+  - 🚀 节点选择
+  - 🎯 全球直连
 - name: 🎯 全球直连
   type: select
   proxies:
   - DIRECT
+- name: 🛑 广告拦截
+  type: select
+  proxies:
+  - REJECT
+  - DIRECT
 rules:
+- DOMAIN-KEYWORD,adservice,🛑 广告拦截
+- DOMAIN-SUFFIX,ads.com,🛑 广告拦截
 - DOMAIN-SUFFIX,cn,🎯 全球直连
 - DOMAIN-SUFFIX,baidu.com,🎯 全球直连
 - DOMAIN-SUFFIX,qq.com,🎯 全球直连
 - DOMAIN-SUFFIX,taobao.com,🎯 全球直连
+- DOMAIN-SUFFIX,alipay.com,🎯 全球直连
 - DOMAIN-SUFFIX,jd.com,🎯 全球直连
-- DOMAIN-SUFFIX,weibo.com,🎯 全球直连
 - DOMAIN-SUFFIX,bilibili.com,📺 哔哩哔哩
+- DOMAIN-SUFFIX,bilibili.tv,📺 哔哩哔哩
 - DOMAIN-SUFFIX,biliapi.com,📺 哔哩哔哩
 - DOMAIN-SUFFIX,biliapi.net,📺 哔哩哔哩
 - DOMAIN-SUFFIX,bilivideo.com,📺 哔哩哔哩
 - DOMAIN-SUFFIX,netflix.com,🌍 国外媒体
 - DOMAIN-SUFFIX,disneyplus.com,🌍 国外媒体
+- DOMAIN-SUFFIX,hbo.com,🌍 国外媒体
 - DOMAIN-SUFFIX,youtube.com,🌍 国外媒体
 - DOMAIN-SUFFIX,twitter.com,🌍 国外媒体
-- DOMAIN-SUFFIX,facebook.com,🌍 国外媒体
-- DOMAIN-SUFFIX,instagram.com,🌍 国外媒体
+- DOMAIN-SUFFIX,microsoft.com,Ⓜ️ 微软服务
+- DOMAIN-SUFFIX,windows.com,Ⓜ️ 微软服务
+- DOMAIN-SUFFIX,office.com,Ⓜ️ 微软服务
+- DOMAIN-SUFFIX,apple.com,🍎 苹果服务
+- DOMAIN-SUFFIX,icloud.com,🍎 苹果服务
 - GEOIP,CN,🎯 全球直连
 - MATCH,🚀 节点选择
