@@ -1,0 +1,4 @@
+# 在此文件中添加订阅链接，每行一个
+# 例如：
+# https://example.com/subscribe.txt
+# https://sub.example.com/link
