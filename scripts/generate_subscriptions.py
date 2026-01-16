@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-自动订阅生成脚本 - Clash兼容版
+自动订阅生成脚本 - 简化版
 支持 hysteria2, ss, vmess, trojan, vless 协议
-生成完全符合Clash规范的YAML
+生成简化配置：只有节点选择和自动选择两个策略组
+所有国内IP直连
 """
 
 import os
@@ -23,7 +24,6 @@ def safe_decode_base64(data):
     data = str(data).strip()
     data = data.replace('\n', '').replace('\r', '')
     
-    # 自动补全
     missing_padding = len(data) % 4
     if missing_padding:
         data += '=' * (4 - missing_padding)
@@ -43,18 +43,15 @@ def clean_config(config):
     
     cleaned = {}
     for key, value in config.items():
-        # 跳过空值
         if value is None or value == '':
             continue
         
-        # 跳过空列表和空字典
         if isinstance(value, (list, dict)) and len(value) == 0:
             continue
         
-        # 递归清理嵌套结构
         if isinstance(value, dict):
             cleaned_value = clean_config(value)
-            if cleaned_value:  # 只添加非空字典
+            if cleaned_value:
                 cleaned[key] = cleaned_value
         elif isinstance(value, list):
             cleaned_list = [clean_config(item) for item in value if clean_config(item) is not None]
@@ -66,24 +63,21 @@ def clean_config(config):
     return cleaned
 
 def parse_hysteria2(url):
-    """解析Hysteria2链接 - Clash兼容格式"""
+    """解析Hysteria2链接"""
     try:
         url = url[11:]  # 移除 hysteria2://
         
-        # 解析名称
         name = ""
         if '#' in url:
             url, fragment = url.split('#', 1)
             name = unquote(fragment)
         
-        # 解析认证和服务器
         if '@' in url:
             auth_part, server_part = url.split('@', 1)
             password = auth_part
         else:
             return None
         
-        # 解析服务器、端口和参数
         server = ""
         port = 443
         query_params = {}
@@ -100,7 +94,6 @@ def parse_hysteria2(url):
         else:
             server = server_port_part
         
-        # Clash兼容的Hysteria2配置
         config = {
             'name': name if name else f"Hysteria2-{server}:{port}",
             'type': 'hysteria2',
@@ -109,7 +102,6 @@ def parse_hysteria2(url):
             'password': password,
         }
         
-        # 添加可选参数
         if query_params.get('sni'):
             config['sni'] = query_params['sni'][0]
         
@@ -120,10 +112,6 @@ def parse_hysteria2(url):
         if query_params.get('alpn'):
             config['alpn'] = query_params['alpn'][0].split(',')
         
-        # 带宽设置（Hysteria2可能需要）
-        config['down'] = '100 Mbps'
-        config['up'] = '100 Mbps'
-        
         return clean_config(config)
         
     except Exception as e:
@@ -131,17 +119,15 @@ def parse_hysteria2(url):
         return None
 
 def parse_ss(url):
-    """解析Shadowsocks链接 - Clash兼容格式"""
+    """解析Shadowsocks链接"""
     try:
         url = url[5:]  # 移除 ss://
         
-        # 解析名称
         name = ""
         if '#' in url:
             url, fragment = url.split('#', 1)
             name = unquote(fragment)
         
-        # 尝试Base64解码
         decoded = safe_decode_base64(url.split('@')[0] if '@' in url else url)
         
         if decoded and ':' in decoded:
@@ -157,7 +143,6 @@ def parse_ss(url):
             else:
                 return None
         
-        # 解析服务器和端口
         if '@' in url:
             _, server_part = url.split('@', 1)
         else:
@@ -172,7 +157,6 @@ def parse_ss(url):
         else:
             return None
         
-        # Clash兼容的SS配置
         config = {
             'name': name if name else f"SS-{server}:{port}",
             'type': 'ss',
@@ -190,7 +174,7 @@ def parse_ss(url):
         return None
 
 def parse_vmess(url):
-    """解析VMess链接 - Clash兼容格式"""
+    """解析VMess链接"""
     try:
         encoded = url[8:]  # 移除 vmess://
         decoded = safe_decode_base64(encoded)
@@ -200,7 +184,6 @@ def parse_vmess(url):
         
         vmess_config = json.loads(decoded)
         
-        # 基础配置
         config = {
             'name': vmess_config.get('ps', f"VMess-{vmess_config.get('add', 'unknown')}"),
             'type': 'vmess',
@@ -212,17 +195,14 @@ def parse_vmess(url):
             'udp': True,
         }
         
-        # TLS设置
         if vmess_config.get('tls') == 'tls':
             config['tls'] = True
             config['skip-cert-verify'] = vmess_config.get('allowInsecure') in [True, 'true', '1']
         
-        # SNI
         sni = vmess_config.get('sni') or vmess_config.get('host')
         if sni:
             config['servername'] = sni
         
-        # 网络类型
         network = vmess_config.get('net', 'tcp')
         if network != 'tcp':
             config['network'] = network
@@ -235,20 +215,6 @@ def parse_vmess(url):
                     ws_opts['headers'] = {'Host': vmess_config['host']}
                 if ws_opts:
                     config['ws-opts'] = ws_opts
-            elif network == 'h2':
-                h2_opts = {}
-                if vmess_config.get('host'):
-                    h2_opts['host'] = [vmess_config['host']]
-                if vmess_config.get('path'):
-                    h2_opts['path'] = vmess_config['path']
-                if h2_opts:
-                    config['h2-opts'] = h2_opts
-            elif network == 'grpc':
-                grpc_opts = {}
-                if vmess_config.get('path'):
-                    grpc_opts['grpc-service-name'] = vmess_config['path']
-                if grpc_opts:
-                    config['grpc-opts'] = grpc_opts
         
         return clean_config(config)
         
@@ -257,24 +223,21 @@ def parse_vmess(url):
         return None
 
 def parse_trojan(url):
-    """解析Trojan链接 - Clash兼容格式"""
+    """解析Trojan链接"""
     try:
         url = url[9:]  # 移除 trojan://
         
-        # 解析名称
         name = ""
         if '#' in url:
             url, fragment = url.split('#', 1)
             name = unquote(fragment)
         
-        # 解析认证和服务器
         if '@' in url:
             password_part, server_part = url.split('@', 1)
             password = password_part
         else:
             return None
         
-        # 解析服务器、端口和参数
         server = ""
         port = 443
         query_params = {}
@@ -291,7 +254,6 @@ def parse_trojan(url):
         else:
             server = server_port_part
         
-        # Clash兼容的Trojan配置
         config = {
             'name': name if name else f"Trojan-{server}:{port}",
             'type': 'trojan',
@@ -299,29 +261,9 @@ def parse_trojan(url):
             'port': port,
             'password': password,
             'sni': query_params.get('sni', [''])[0] or server,
-            'skip-cert-verify': query_params.get('allowInsecure', ['0'])[0] == '1' or query_params.get('insecure', ['0'])[0] == '1',
+            'skip-cert-verify': query_params.get('allowInsecure', ['0'])[0] == '1',
             'udp': True
         }
-        
-        # 网络类型
-        if query_params.get('type'):
-            network = query_params['type'][0]
-            config['network'] = network
-            
-            if network == 'ws':
-                ws_opts = {}
-                if query_params.get('path'):
-                    ws_opts['path'] = query_params['path'][0]
-                if query_params.get('host'):
-                    ws_opts['headers'] = {'Host': query_params['host'][0]}
-                if ws_opts:
-                    config['ws-opts'] = ws_opts
-            elif network == 'grpc':
-                grpc_opts = {}
-                if query_params.get('serviceName'):
-                    grpc_opts['grpc-service-name'] = query_params['serviceName'][0]
-                if grpc_opts:
-                    config['grpc-opts'] = grpc_opts
         
         return clean_config(config)
         
@@ -330,24 +272,21 @@ def parse_trojan(url):
         return None
 
 def parse_vless(url):
-    """解析VLESS链接 - 简化版（跳过复杂配置）"""
+    """解析VLESS链接"""
     try:
         url = url[8:]  # 移除 vless://
         
-        # 解析名称
         name = ""
         if '#' in url:
             url, fragment = url.split('#', 1)
             name = unquote(fragment)
         
-        # 解析UUID和服务器
         if '@' in url:
             uuid_part, server_part = url.split('@', 1)
             uuid = uuid_part
         else:
             return None
         
-        # 解析服务器、端口和参数
         server = ""
         port = 443
         query_params = {}
@@ -364,16 +303,6 @@ def parse_vless(url):
         else:
             server = server_port_part
         
-        # VLESS在Clash中支持有限，这里简化处理
-        # 如果是Reality协议，可能不被支持，跳过或使用fallback
-        security = query_params.get('security', [''])[0]
-        
-        if security == 'reality':
-            # Reality协议可能不被完全支持，使用简化配置或跳过
-            print(f"  跳过VLESS Reality协议: {name or server}")
-            return None
-        
-        # 普通VLESS配置
         config = {
             'name': name if name else f"VLESS-{server}:{port}",
             'type': 'vless',
@@ -383,28 +312,13 @@ def parse_vless(url):
             'udp': True,
         }
         
-        # TLS设置
-        if security in ['tls', 'xtls', 'reality']:
+        security = query_params.get('security', [''])[0]
+        if security in ['tls', 'xtls']:
             config['tls'] = True
             config['skip-cert-verify'] = query_params.get('allowInsecure', ['0'])[0] == '1'
         
-        # SNI
-        sni = query_params.get('sni', [''])[0] or query_params.get('host', [''])[0] or server
+        sni = query_params.get('sni', [''])[0] or server
         config['servername'] = sni
-        
-        # 网络类型
-        if query_params.get('type'):
-            network = query_params['type'][0]
-            config['network'] = network
-            
-            if network == 'ws':
-                ws_opts = {}
-                if query_params.get('path'):
-                    ws_opts['path'] = query_params['path'][0]
-                if query_params.get('host'):
-                    ws_opts['headers'] = {'Host': query_params['host'][0]}
-                if ws_opts:
-                    config['ws-opts'] = ws_opts
         
         return clean_config(config)
         
@@ -429,9 +343,6 @@ def parse_proxy_url(url):
         return parse_trojan(url)
     elif url.startswith('vless://'):
         return parse_vless(url)
-    elif url.startswith('ssr://'):
-        print(f"  跳过SSR协议: {url[:50]}...")
-        return None
     
     return None
 
@@ -439,18 +350,15 @@ def fetch_subscription(url):
     """获取订阅内容"""
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/plain, */*',
     }
     
     try:
-        print(f"  获取订阅: {url[:80]}...")
         response = requests.get(url, headers=headers, timeout=30)
         response.raise_for_status()
         
         content = response.text.strip()
-        
-        # 尝试Base64解码
         decoded = safe_decode_base64(content)
+        
         if decoded:
             return decoded
         
@@ -479,11 +387,10 @@ def process_subscription_content(content):
     
     return proxies
 
-def generate_clash_config(proxies, filename):
-    """生成完全兼容Clash的配置"""
+def generate_simple_clash_config(proxies, filename):
+    """生成简化版Clash配置 - 只有两个策略组"""
     if not proxies:
         print("  没有有效节点，创建测试配置")
-        # 创建一个简单的测试节点
         proxies = [{
             'name': '测试节点',
             'type': 'ss',
@@ -494,102 +401,146 @@ def generate_clash_config(proxies, filename):
             'udp': True
         }]
     
-    # 确保所有配置都经过清理
     cleaned_proxies = [clean_config(p) for p in proxies if p]
     
-    # Clash完全兼容的配置
+    # 简化配置：只有两个策略组
     config = {
+        # 基础设置
         'port': 7890,
         'socks-port': 7891,
         'mixed-port': 7893,
-        'allow-lan': False,  # 安全考虑，默认关闭
+        'allow-lan': False,
         'mode': 'rule',
         'log-level': 'info',
-        'external-controller': '127.0.0.1:9090',  # 只监听本地
-        'secret': '',
+        'external-controller': '127.0.0.1:9090',
+        
+        # DNS设置
         'dns': {
             'enable': True,
             'ipv6': False,
             'listen': '127.0.0.1:53',
-            'default-nameserver': [
-                '223.5.5.5',
-                '119.29.29.29'
-            ],
+            'default-nameserver': ['223.5.5.5', '119.29.29.29'],
             'enhanced-mode': 'fake-ip',
             'fake-ip-range': '198.18.0.1/16',
-            'nameserver': [
-                'https://doh.pub/dns-query',
-                'https://dns.alidns.com/dns-query'
-            ],
-            'fallback': [
-                'https://doh.dns.sb/dns-query',
-                'https://dns.cloudflare.com/dns-query'
-            ],
+            'nameserver': ['https://doh.pub/dns-query'],
+            'fallback': ['https://dns.cloudflare.com/dns-query'],
             'fallback-filter': {
                 'geoip': True,
-                'ipcidr': [
-                    '240.0.0.0/4'
-                ]
+                'ipcidr': ['240.0.0.0/4']
             }
         },
-        'proxies': cleaned_proxies[:100],  # 限制数量
+        
+        # 代理节点
+        'proxies': cleaned_proxies[:200],  # 最多200个节点
+        
+        # 策略组 - 只有两个
         'proxy-groups': [
             {
-                'name': 'PROXY',
+                'name': '节点选择',
                 'type': 'select',
-                'proxies': ['DIRECT', 'REJECT', 'Auto'] + [p.get('name', 'Node') for p in cleaned_proxies[:5]]
+                'proxies': ['自动选择', 'DIRECT']
             },
             {
-                'name': 'Auto',
-                'type': 'url-test',
+                'name': '自动选择',
+                'type': 'url-test',  # 自动选择低延迟节点
                 'url': 'http://www.gstatic.com/generate_204',
                 'interval': 300,
-                'proxies': [p.get('name', 'Node') for p in cleaned_proxies[:30]]
-            },
-            {
-                'name': 'Streaming',
-                'type': 'select',
-                'proxies': ['PROXY', 'Auto', 'DIRECT']
-            },
-            {
-                'name': 'Global',
-                'type': 'select',
-                'proxies': ['DIRECT']
+                'tolerance': 50,
+                'proxies': [p.get('name', '节点') for p in cleaned_proxies[:200]]
             }
         ],
+        
+        # 规则 - 国内IP全部直连
         'rules': [
-            # 广告拦截
-            'DOMAIN-SUFFIX,ads.com,REJECT',
-            'DOMAIN-KEYWORD,adsite,REJECT',
-            
-            # 国内直连
+            # 国内域名直连
             'DOMAIN-SUFFIX,cn,DIRECT',
             'DOMAIN-SUFFIX,baidu.com,DIRECT',
             'DOMAIN-SUFFIX,qq.com,DIRECT',
             'DOMAIN-SUFFIX,taobao.com,DIRECT',
             'DOMAIN-SUFFIX,jd.com,DIRECT',
             'DOMAIN-SUFFIX,weibo.com,DIRECT',
-            
-            # 流媒体
-            'DOMAIN-SUFFIX,netflix.com,Streaming',
-            'DOMAIN-SUFFIX,disneyplus.com,Streaming',
-            'DOMAIN-SUFFIX,youtube.com,Streaming',
+            'DOMAIN-SUFFIX,sina.com,DIRECT',
+            'DOMAIN-SUFFIX,sohu.com,DIRECT',
+            'DOMAIN-SUFFIX,163.com,DIRECT',
+            'DOMAIN-SUFFIX,126.com,DIRECT',
+            'DOMAIN-SUFFIX,alibaba.com,DIRECT',
+            'DOMAIN-SUFFIX,alicdn.com,DIRECT',
+            'DOMAIN-SUFFIX,alipay.com,DIRECT',
+            'DOMAIN-SUFFIX,wechat.com,DIRECT',
+            'DOMAIN-SUFFIX,tencent.com,DIRECT',
             'DOMAIN-SUFFIX,bilibili.com,DIRECT',
+            'DOMAIN-SUFFIX,zhihu.com,DIRECT',
+            'DOMAIN-SUFFIX,douyin.com,DIRECT',
+            'DOMAIN-SUFFIX,toutiao.com,DIRECT',
+            'DOMAIN-SUFFIX,bytedance.com,DIRECT',
+            'DOMAIN-SUFFIX,meituan.com,DIRECT',
+            'DOMAIN-SUFFIX,dianping.com,DIRECT',
+            'DOMAIN-SUFFIX,ctrip.com,DIRECT',
+            'DOMAIN-SUFFIX,huya.com,DIRECT',
+            'DOMAIN-SUFFIX,douyu.com,DIRECT',
             
-            # 国外网站
-            'DOMAIN-SUFFIX,google.com,PROXY',
-            'DOMAIN-SUFFIX,github.com,PROXY',
-            'DOMAIN-SUFFIX,twitter.com,PROXY',
+            # 国内IP段直连
+            'IP-CIDR,1.0.1.0/24,DIRECT',
+            'IP-CIDR,1.0.2.0/23,DIRECT',
+            'IP-CIDR,1.0.8.0/21,DIRECT',
+            'IP-CIDR,1.0.32.0/19,DIRECT',
+            'IP-CIDR,1.1.0.0/24,DIRECT',
+            'IP-CIDR,1.1.2.0/23,DIRECT',
+            'IP-CIDR,1.1.4.0/22,DIRECT',
+            'IP-CIDR,1.1.8.0/21,DIRECT',
+            'IP-CIDR,1.1.16.0/20,DIRECT',
+            'IP-CIDR,1.1.32.0/19,DIRECT',
+            'IP-CIDR,1.2.0.0/23,DIRECT',
+            'IP-CIDR,1.2.2.0/24,DIRECT',
+            'IP-CIDR,1.2.4.0/22,DIRECT',
+            'IP-CIDR,1.2.8.0/21,DIRECT',
+            'IP-CIDR,1.2.16.0/20,DIRECT',
+            'IP-CIDR,1.2.32.0/19,DIRECT',
+            'IP-CIDR,1.2.64.0/18,DIRECT',
+            'IP-CIDR,1.3.0.0/16,DIRECT',
+            'IP-CIDR,1.4.1.0/24,DIRECT',
+            'IP-CIDR,1.4.2.0/23,DIRECT',
+            'IP-CIDR,1.4.4.0/22,DIRECT',
+            'IP-CIDR,1.4.8.0/21,DIRECT',
+            'IP-CIDR,1.4.16.0/20,DIRECT',
+            'IP-CIDR,1.4.32.0/19,DIRECT',
+            'IP-CIDR,1.4.64.0/18,DIRECT',
+            'IP-CIDR,1.8.0.0/16,DIRECT',
+            'IP-CIDR,1.10.0.0/21,DIRECT',
+            'IP-CIDR,1.10.8.0/23,DIRECT',
+            'IP-CIDR,1.10.11.0/24,DIRECT',
+            'IP-CIDR,1.10.12.0/22,DIRECT',
+            'IP-CIDR,1.10.16.0/20,DIRECT',
+            'IP-CIDR,1.10.32.0/19,DIRECT',
+            'IP-CIDR,1.10.64.0/18,DIRECT',
+            'IP-CIDR,1.12.0.0/14,DIRECT',
+            'IP-CIDR,1.24.0.0/13,DIRECT',
+            'IP-CIDR,1.45.0.0/16,DIRECT',
+            'IP-CIDR,1.48.0.0/15,DIRECT',
+            'IP-CIDR,1.50.0.0/16,DIRECT',
+            'IP-CIDR,1.51.0.0/16,DIRECT',
+            'IP-CIDR,1.56.0.0/13,DIRECT',
+            'IP-CIDR,1.68.0.0/14,DIRECT',
+            'IP-CIDR,1.80.0.0/13,DIRECT',
+            'IP-CIDR,1.88.0.0/14,DIRECT',
+            'IP-CIDR,1.92.0.0/15,DIRECT',
+            'IP-CIDR,1.94.0.0/15,DIRECT',
+            'IP-CIDR,1.116.0.0/14,DIRECT',
+            'IP-CIDR,1.180.0.0/14,DIRECT',
+            'IP-CIDR,1.184.0.0/15,DIRECT',
+            'IP-CIDR,1.188.0.0/14,DIRECT',
+            'IP-CIDR,1.192.0.0/13,DIRECT',
+            'IP-CIDR,1.202.0.0/15,DIRECT',
+            'IP-CIDR,1.204.0.0/14,DIRECT',
             
-            # GEOIP
+            # GEOIP中国直连（这个规则必须在IP-CIDR之后）
             'GEOIP,CN,DIRECT',
             
-            # 最终规则
-            'MATCH,PROXY'
+            # 最终规则 - 其他所有流量走节点选择
+            'MATCH,节点选择'
         ]
     }
     
-    # 清理整个配置
     config = clean_config(config)
     
     # 写入文件
@@ -598,56 +549,41 @@ def generate_clash_config(proxies, filename):
     
     output_path = os.path.join(output_dir, f'{filename}.yaml')
     
-    # 使用安全的YAML转储
     with open(output_path, 'w', encoding='utf-8') as f:
         yaml.dump(config, f, 
                  allow_unicode=True, 
                  default_flow_style=False, 
                  sort_keys=False,
-                 width=float("inf"),
-                 explicit_start=False)
+                 width=float("inf"))
     
     print(f"  生成配置文件: {output_path}")
-    print(f"  包含 {len(cleaned_proxies[:100])} 个节点")
+    print(f"  包含 {len(cleaned_proxies[:200])} 个节点")
     
-    # 验证YAML格式
-    try:
-        with open(output_path, 'r', encoding='utf-8') as f:
-            test_config = yaml.safe_load(f)
-        print("  YAML格式验证成功")
-    except Exception as e:
-        print(f"  YAML格式验证失败: {e}")
-    
-    return len(cleaned_proxies[:100])
+    return len(cleaned_proxies[:200])
 
 def main():
     """主函数"""
-    print("开始生成Clash订阅...")
+    print("开始生成简化版Clash订阅...")
     
-    # 确保目录存在
     input_dir = '输入源'
-    output_dir = '订阅链接'
-    
     os.makedirs(input_dir, exist_ok=True)
-    os.makedirs(output_dir, exist_ok=True)
+    
+    # 查找输入文件
+    txt_files = [f for f in os.listdir(input_dir) if f.endswith('.txt')]
+    
+    if not txt_files:
+        print(f"没有找到输入文件，请在 '{input_dir}' 中创建.txt文件")
+        return
     
     # 清理输出目录
+    output_dir = '订阅链接'
+    os.makedirs(output_dir, exist_ok=True)
     import glob
     for old_file in glob.glob(os.path.join(output_dir, '*.yaml')):
         try:
             os.remove(old_file)
         except:
             pass
-    
-    # 查找输入文件
-    txt_files = []
-    for file in os.listdir(input_dir):
-        if file.endswith('.txt'):
-            txt_files.append(file)
-    
-    if not txt_files:
-        print(f"没有找到输入文件，请在 '{input_dir}' 中创建.txt文件")
-        return
     
     # 处理每个文件
     for filename in txt_files:
@@ -679,7 +615,6 @@ def main():
                     all_proxies.extend(proxies)
                     print(f"    找到 {len(proxies)} 个节点")
             
-            # 避免请求过快
             if i < len(urls) - 1:
                 time.sleep(1)
         
@@ -698,10 +633,10 @@ def main():
         
         print(f"  总计: {len(all_proxies)} 个节点，去重后: {len(unique_proxies)} 个")
         
-        # 生成配置
+        # 生成简化配置
         if unique_proxies:
             base_name = os.path.splitext(filename)[0]
-            generate_clash_config(unique_proxies, base_name)
+            generate_simple_clash_config(unique_proxies, base_name)
         else:
             print("  没有有效节点")
     
